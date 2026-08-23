@@ -1,0 +1,11 @@
+allowBuilds:
+  '@google/genai': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  core-js: true
+  prisma: true
+  protobufjs: true
+  sharp: true
+ignoredBuiltDependencies:
+  - '@prisma/client'
+  - sharp

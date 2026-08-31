@@ -48,10 +48,10 @@ export async function createMotivo(nome: string) {
       where: { ownerId: session.ownerId },
     });
 
-    if (totalMotivos >= 15) {
+    if (totalMotivos >= 10) {
       return {
         success: false,
-        message: "Limite de 15 motivos atingido. Exclua um motivo para criar outro.",
+        message: "Limite de 10 motivos atingido. Exclua um motivo para criar outro.",
       };
     }
 

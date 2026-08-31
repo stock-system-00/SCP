@@ -15,18 +15,17 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { AlertTriangle, FileCode2, PanelLeft, Search, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger, PopoverPrimitive } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { PageHeader } from "@/components/PageHeader";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { CriticalItems } from "@/components/dashboard/critical-items";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
-import { getDashboardStats } from "@/app/actions/dashboard";
-import { PackageSearch, ArrowLeftRight, FileText } from "lucide-react";
+
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -163,7 +162,6 @@ export default function Dashboard() {
   const [pb, setPb] = useState("2026-W32");
   const [busca, setBusca] = useState("");
   const [limiteGlobal, setLimiteGlobal] = useState(2);
-  const [soAlertas, setSoAlertas] = useState(false);
 
   const diasA = useMemo(() => periodoDias(modo, pa), [modo, pa]);
   const diasB = useMemo(() => periodoDias(modo, pb), [modo, pb]);
@@ -214,9 +212,8 @@ export default function Dashboard() {
           giro > 95 ? "estoque_baixo" : perdaPct > limite ? "desperdicio" : "ok";
         return { ...l, perdaPct, giro, limite, status, faturou: l.vendido * l.precoVenda };
       })
-      .filter((l) => (!soAlertas ? true : l.status !== "ok"))
       .sort((a, b) => b.faturou - a.faturou);
-  }, [filteredLinhasA, limiteGlobal, soAlertas]);
+  }, [filteredLinhasA, limiteGlobal]);
 
   const rupturas = tabela.filter((l) => l.status === "estoque_baixo");
   const desperdicios = tabela.filter((l) => l.status === "desperdicio");
@@ -413,15 +410,6 @@ export default function Dashboard() {
                 </PopoverContent>
               </Popover>
             </CardTitle>
-            <label className="flex items-center gap-2 text-[11px] text-muted-foreground font-normal">
-              <input
-                type="checkbox"
-                checked={soAlertas}
-                onChange={(e) => setSoAlertas(e.target.checked)}
-                className="h-3.5 w-3.5 accent-[var(--primary)]"
-              />
-              somente alertas
-            </label>
           </CardHeader>
 
           <CardContent className="p-0">

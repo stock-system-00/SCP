@@ -304,7 +304,7 @@ export function AIAssistant() {
     </div>
   );
 
-  if (pathname === "/eventos/novo") {
+  if (pathname === "/eventos/novo" || (isMobile && pathname === "/eventos")) {
     return null;
   }
 

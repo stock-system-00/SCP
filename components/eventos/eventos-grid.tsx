@@ -1,16 +1,23 @@
 "use client";
+import { useState, useRef } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import {
-  CheckCircle2,
-  Circle,
+  FileCheck,
+  FileUp,
   ChevronRightSquare,
   Loader2,
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Evento } from "@/lib/types";
-import { useState, useRef } from "react";
 import { toast } from "sonner";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Trash } from "lucide-react";
 
 export type BatchStatus = "pendente" | "aprovado" | "rejeitado";
 
@@ -29,9 +36,10 @@ interface EventosGridProps {
   lotes: LoteDiario[];
   onSelect: (lote: LoteDiario) => void;
   onUploadNfe: (lote: LoteDiario, base64: string) => Promise<void>;
+  onRemoveNfe?: (lote: LoteDiario) => Promise<void>;
 }
 
-export function EventosGrid({ lotes, onSelect, onUploadNfe }: EventosGridProps) {
+export function EventosGrid({ lotes, onSelect, onUploadNfe, onRemoveNfe }: EventosGridProps) {
   const [updatingDate, setUpdatingDate] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeLoteForUpload, setActiveLoteForUpload] = useState<LoteDiario | null>(null);
@@ -86,76 +94,98 @@ export function EventosGrid({ lotes, onSelect, onUploadNfe }: EventosGridProps) 
     <>
       <div className="flex flex-col gap-2">
         {lotes.map((lote) => (
-          <div
-            key={lote.data}
-            className="group flex items-center justify-between p-3 rounded-md border bg-background hover:bg-muted/40 hover:border-primary/30 transition-all cursor-pointer shadow-sm"
-            onClick={() => onSelect(lote)}
-          >
-            <div className="flex items-center gap-4">
-              {}
+          <ContextMenu key={lote.data}>
+            <ContextMenuTrigger asChild>
               <div
-                onClick={(e) => handleIconClick(e, lote)}
-                className={cn(
-                  "flex h-9 w-9 items-center justify-center rounded-full border transition-all cursor-pointer",
-                  lote.nfeEmitida
-                    ? "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 hover:scale-105"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105",
-                )}
-                title={
-                  lote.nfeEmitida
-                    ? "Nota Fiscal de Perda: Emitida"
-                    : "Marcar Nota Fiscal de Perda como Emitida"
-                }
+                className="group flex items-center justify-between p-3 rounded-md border bg-background hover:bg-muted/40 hover:border-primary/30 transition-all cursor-pointer shadow-sm"
+                onClick={() => onSelect(lote)}
               >
-                {updatingDate === lote.data ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : lote.nfeEmitida ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : (
-                  <Circle className="h-4 w-4" />
-                )}
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold">{lote.data}</h3>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span>{lote.autor}</span>
-                  <span>•</span>
-                  <Badge
-                    variant="outline"
+                <div className="flex items-center gap-4">
+                  <div
+                    onClick={(e) => handleIconClick(e, lote)}
                     className={cn(
-                      "h-4 px-1 text-[10px] border-0 bg-transparent p-0 font-normal",
-                      lote.status === "aprovado"
-                        ? "text-green-600"
-                        : lote.status === "rejeitado"
-                          ? "text-red-600"
-                          : "text-muted-foreground",
+                      "flex h-9 w-9 items-center justify-center rounded-full border transition-all cursor-pointer",
+                      lote.nfeEmitida
+                        ? "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20 hover:scale-105"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80 hover:scale-105",
                     )}
+                    title={
+                      lote.nfeEmitida
+                        ? "Nota Fiscal de Perda Anexada"
+                        : "Anexar Nota Fiscal de Perda"
+                    }
                   >
-                    {lote.status.toUpperCase()}
-                  </Badge>
+                    {updatingDate === lote.data ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : lote.nfeEmitida ? (
+                      <FileCheck className="h-4 w-4" />
+                    ) : (
+                      <FileUp className="h-4 w-4" />
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold">{lote.data}</h3>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{lote.autor}</span>
+                      <span>•</span>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "h-4 px-1 text-[10px] border-0 bg-transparent p-0 font-normal",
+                          lote.status === "aprovado"
+                            ? "text-green-600"
+                            : lote.status === "rejeitado"
+                              ? "text-red-600"
+                              : "text-muted-foreground",
+                        )}
+                      >
+                        {lote.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-6 md:gap-12">
+                  <div className="hidden md:block text-right">
+                    <p className="text-[10px] text-muted-foreground uppercase">
+                      Itens
+                    </p>
+                    <p className="text-sm font-medium">{lote.eventos.length}</p>
+                  </div>
+                  <div className="text-right min-w-20">
+                    <p className="text-[10px] text-muted-foreground uppercase">
+                      Total
+                    </p>
+                    <p className="text-sm font-bold">
+                      {formatCurrency(lote.totalCusto)}
+                    </p>
+                  </div>
+                  <ChevronRightSquare className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center gap-6 md:gap-12">
-              <div className="hidden md:block text-right">
-                <p className="text-[10px] text-muted-foreground uppercase">
-                  Itens
-                </p>
-                <p className="text-sm font-medium">{lote.eventos.length}</p>
-              </div>
-              <div className="text-right min-w-20">
-                <p className="text-[10px] text-muted-foreground uppercase">
-                  Total
-                </p>
-                <p className="text-sm font-bold">
-                  {formatCurrency(lote.totalCusto)}
-                </p>
-              </div>
-              <ChevronRightSquare className="h-5 w-5 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
-            </div>
-          </div>
+            </ContextMenuTrigger>
+            {lote.nfePdfUrl && onRemoveNfe && (
+              <ContextMenuContent>
+                <ContextMenuItem
+                  className="text-red-600 focus:bg-red-600 focus:text-white"
+                  onClick={async () => {
+                    setUpdatingDate(lote.data);
+                    try {
+                      await onRemoveNfe(lote);
+                    } catch (e) {
+                      console.error(e);
+                    } finally {
+                      setUpdatingDate(null);
+                    }
+                  }}
+                >
+                  <Trash className="mr-2 h-4 w-4" />
+                  Excluir Nota Anexada
+                </ContextMenuItem>
+              </ContextMenuContent>
+            )}
+          </ContextMenu>
         ))}
       </div>
 

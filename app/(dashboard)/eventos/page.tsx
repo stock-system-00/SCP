@@ -21,6 +21,7 @@ import {
   updateEventoStatus,
   deleteEvento,
   uploadNfePdfLote,
+  removeNfePdfLote,
 } from "@/app/actions/eventos";
 
 import {
@@ -159,7 +160,7 @@ export default function EventosPage() {
         if (todosOk) status = "aprovado";
         else if (temRejeitado) status = "rejeitado";
 
-        const isNfeEmitida = eventos.some((e) => e.nfeEmitida);
+        const isNfeEmitida = eventos.some((e) => !!e.nfePdfUrl);
         const pdfUrl = eventos.find((e) => e.nfePdfUrl)?.nfePdfUrl;
 
         return {
@@ -278,6 +279,25 @@ export default function EventosPage() {
     }
   };
 
+  const handleRemoveNfe = async (lote: LoteDiario) => {
+    const eventoIds = lote.eventos.map((e) => e.id);
+    
+    const optimisicData = eventosDoBanco.map((ev) =>
+      eventoIds.includes(ev.id) ? { ...ev, nfeEmitida: false, nfePdfUrl: null } : ev
+    );
+
+    mutate(optimisicData, false);
+
+    const result = await removeNfePdfLote(eventoIds);
+    if (!result.success) {
+      toast.error(result.message);
+      mutate();
+    } else {
+      toast.success("Nota Fiscal removida.");
+      mutate(optimisicData, true);
+    }
+  };
+
   if (!hasPermission("eventos:ver_todos")) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -292,7 +312,7 @@ export default function EventosPage() {
     const eventos = dadosPaginados.currentItems as Evento[];
     if (eventos.length === 0) return;
 
-    const headers = ["Data", "Codigo", "Produto", "Qtd", "Total", "Status", "NFe Emitida"];
+    const headers = ["Data", "Codigo", "Produto", "Qtd", "Total", "Status", "NFe Anexada"];
     
     const rows = eventos.map((ev) => [
       formatDate(ev.dataHora),
@@ -418,6 +438,7 @@ export default function EventosPage() {
               lotes={dadosPaginados.currentItems as LoteDiario[]}
               onSelect={setLoteSelecionado}
               onUploadNfe={handleUploadNfe}
+              onRemoveNfe={handleRemoveNfe}
             />
           )}
         </div>

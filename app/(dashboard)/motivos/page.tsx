@@ -175,11 +175,11 @@ export default function MotivosPage() {
         {hasPermission("motivos:criar") && (
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground hidden sm:inline-block">
-              {motivos.length}/15
+              {motivos.length}/10
             </span>
             <Button
               onClick={() => handleOpenDialog()}
-              disabled={motivos.length >= 15}
+              disabled={motivos.length >= 10}
             >
               <Plus className="mr-2 h-4 w-4" /> Novo Motivo
             </Button>

@@ -271,6 +271,32 @@ export async function uploadNfePdfLote(eventoIds: string[], base64Pdf: string) {
   }
 }
 
+export async function removeNfePdfLote(eventoIds: string[]) {
+  const auth = await requireServerPermission("eventos:editar");
+  if (!auth.success) return auth;
+  const session = auth.session;
+
+  try {
+    await prisma.evento.updateMany({
+      where: {
+        id: { in: eventoIds },
+        ownerId: session.ownerId,
+      },
+      data: {
+        nfeEmitida: false,
+        // @ts-ignore
+        nfePdfUrl: null,
+      },
+    });
+    
+    revalidatePath("/eventos");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao remover o PDF da nota fiscal em lote:", error);
+    return { success: false, message: "Erro ao remover nota fiscal." };
+  }
+}
+
 
 export async function getNotaDoLote(dataString: string) {
   const auth = await requireServerPermission("notas:ver");

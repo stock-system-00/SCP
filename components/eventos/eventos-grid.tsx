@@ -9,18 +9,8 @@ import {
 } from "lucide-react";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Evento } from "@/lib/types";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 export type BatchStatus = "pendente" | "aprovado" | "rejeitado";
 
@@ -32,17 +22,19 @@ export interface LoteDiario {
   status: BatchStatus;
   autor: string;
   nfeEmitida?: boolean;
+  nfePdfUrl?: string;
 }
 
 interface EventosGridProps {
   lotes: LoteDiario[];
   onSelect: (lote: LoteDiario) => void;
-  onToggleNfe: (lote: LoteDiario) => Promise<void>;
+  onUploadNfe: (lote: LoteDiario, base64: string) => Promise<void>;
 }
 
-export function EventosGrid({ lotes, onSelect, onToggleNfe }: EventosGridProps) {
+export function EventosGrid({ lotes, onSelect, onUploadNfe }: EventosGridProps) {
   const [updatingDate, setUpdatingDate] = useState<string | null>(null);
-  const [loteToConfirm, setLoteToConfirm] = useState<LoteDiario | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeLoteForUpload, setActiveLoteForUpload] = useState<LoteDiario | null>(null);
 
   if (lotes.length === 0) {
     return (
@@ -54,21 +46,40 @@ export function EventosGrid({ lotes, onSelect, onToggleNfe }: EventosGridProps) 
 
   const handleIconClick = (e: React.MouseEvent, lote: LoteDiario) => {
     e.stopPropagation();
-    setLoteToConfirm(lote);
+    if (lote.nfePdfUrl) {
+      window.open(lote.nfePdfUrl, "_blank");
+    } else {
+      setActiveLoteForUpload(lote);
+      fileInputRef.current?.click();
+    }
   };
 
-  const confirmToggle = async () => {
-    if (!loteToConfirm) return;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeLoteForUpload) return;
     
-    setUpdatingDate(loteToConfirm.data);
-    try {
-      await onToggleNfe(loteToConfirm);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setUpdatingDate(null);
-      setLoteToConfirm(null);
+    if (file.type !== "application/pdf") {
+      toast.error("Por favor, selecione um arquivo PDF.");
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      setUpdatingDate(activeLoteForUpload.data);
+      try {
+        await onUploadNfe(activeLoteForUpload, base64);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setUpdatingDate(null);
+        setActiveLoteForUpload(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -148,26 +159,13 @@ export function EventosGrid({ lotes, onSelect, onToggleNfe }: EventosGridProps) 
         ))}
       </div>
 
-      <AlertDialog open={!!loteToConfirm} onOpenChange={(open: boolean) => !open && setLoteToConfirm(null)}>
-        <AlertDialogContent className="bg-black/80 backdrop-blur-md border-zinc-800">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Confirmação</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-300">
-              {loteToConfirm?.nfeEmitida 
-                ? "Deseja desmarcar a nota fiscal de perda deste dia?" 
-                : "Deseja marcar como nota fiscal de perda feita para este dia?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent text-white hover:bg-zinc-800 hover:text-white border-zinc-700">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmToggle} className="bg-primary text-primary-foreground hover:bg-primary/90">
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <input
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+      />
     </>
   );
 }

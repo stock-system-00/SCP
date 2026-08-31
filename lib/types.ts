@@ -96,6 +96,7 @@ export interface Evento {
 
   notasFiscais?: NotaFiscal[];
   nfeEmitida?: boolean;
+  nfePdfUrl?: string | null;
 }
 
 export interface CategoriaData {

@@ -20,7 +20,7 @@ import {
   getEventos,
   updateEventoStatus,
   deleteEvento,
-  toggleNfeEmitidaLote,
+  uploadNfePdfLote,
 } from "@/app/actions/eventos";
 
 import {
@@ -91,6 +91,7 @@ export default function EventosPage() {
       criadoPor: ev.criadoPor,
       evidencias: ev.evidencias,
       nfeEmitida: ev.nfeEmitida,
+      nfePdfUrl: ev.nfePdfUrl,
     }));
     return mappedEventos;
   };
@@ -159,6 +160,7 @@ export default function EventosPage() {
         else if (temRejeitado) status = "rejeitado";
 
         const isNfeEmitida = eventos.some((e) => e.nfeEmitida);
+        const pdfUrl = eventos.find((e) => e.nfePdfUrl)?.nfePdfUrl;
 
         return {
           data,
@@ -171,6 +173,7 @@ export default function EventosPage() {
           status,
           autor: eventos[0].criadoPor?.nome || "Sistema",
           nfeEmitida: isNfeEmitida,
+          nfePdfUrl: pdfUrl,
         } as LoteDiario;
       })
       .sort((a, b) => b.dataOriginal.getTime() - a.dataOriginal.getTime());
@@ -254,23 +257,24 @@ export default function EventosPage() {
     }
   };
 
-  const handleToggleNfe = async (lote: LoteDiario) => {
+  const handleUploadNfe = async (lote: LoteDiario, base64: string) => {
     const eventoIds = lote.eventos.map((e) => e.id);
-    const newStatus = !lote.nfeEmitida;
     
+    // We cannot easily do optimistic UI for the URL since it comes from R2,
+    // but we can set nfeEmitida optimistically
     const optimisicData = eventosDoBanco.map((ev) =>
-      eventoIds.includes(ev.id) ? { ...ev, nfeEmitida: newStatus } : ev
+      eventoIds.includes(ev.id) ? { ...ev, nfeEmitida: true } : ev
     );
 
     mutate(optimisicData, false);
 
-    const result = await toggleNfeEmitidaLote(eventoIds, newStatus);
+    const result = await uploadNfePdfLote(eventoIds, base64);
     if (!result.success) {
       toast.error(result.message);
       mutate();
     } else {
-      toast.success(newStatus ? "Nota Fiscal marcada como emitida." : "Nota Fiscal desmarcada.");
-      mutate(optimisicData, true);
+      toast.success("Nota Fiscal anexada com sucesso.");
+      mutate(); // Re-fetch to get the actual URL
     }
   };
 
@@ -413,7 +417,7 @@ export default function EventosPage() {
             <EventosGrid
               lotes={dadosPaginados.currentItems as LoteDiario[]}
               onSelect={setLoteSelecionado}
-              onToggleNfe={handleToggleNfe}
+              onUploadNfe={handleUploadNfe}
             />
           )}
         </div>

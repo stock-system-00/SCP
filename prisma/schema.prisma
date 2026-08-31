@@ -163,6 +163,7 @@ model Evento {
   custoSnapshot      Decimal @db.Decimal(10, 2)
   precoVendaSnapshot Decimal @db.Decimal(10, 2)
   nfeEmitida         Boolean @default(false)
+  nfePdfUrl          String?
 
   itemId String? 
   item   Item?   @relation(fields: [itemId], references: [id], onDelete: SetNull)

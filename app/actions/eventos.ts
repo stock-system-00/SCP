@@ -22,7 +22,7 @@ export type CreateEventoData = {
 
 async function uploadToR2(base64Image: string): Promise<string | null> {
   try {
-    const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
+    const base64Data = base64Image.replace(/^data:[a-zA-Z0-9+\/.-]+;base64,/, "");
     const buffer = Buffer.from(base64Data, "base64");
     
 
@@ -36,8 +36,11 @@ async function uploadToR2(base64Image: string): Promise<string | null> {
     } else if (header === "89504E47") {
       contentType = "image/png";
       extension = "png";
+    } else if (header.startsWith("25504446")) {
+      contentType = "application/pdf";
+      extension = "pdf";
     } else {
-      console.error("Tentativa de upload inválido: Tipo de arquivo não suportado.");
+      console.error("Tentativa de upload inválido: Tipo de arquivo não suportado.", header);
       return null;
     }
 
@@ -234,6 +237,37 @@ export async function toggleNfeEmitidaLote(eventoIds: string[], nfeEmitida: bool
   } catch (error) {
     console.error("Erro ao atualizar nfeEmitida em lote:", error);
     return { success: false, message: "Erro ao atualizar status da nota fiscal." };
+  }
+}
+
+export async function uploadNfePdfLote(eventoIds: string[], base64Pdf: string) {
+  const auth = await requireServerPermission("eventos:editar");
+  if (!auth.success) return auth;
+  const session = auth.session;
+
+  try {
+    const pdfUrl = await uploadToR2(base64Pdf);
+    if (!pdfUrl) {
+      return { success: false, message: "Falha ao enviar o arquivo PDF." };
+    }
+
+    await prisma.evento.updateMany({
+      where: {
+        id: { in: eventoIds },
+        ownerId: session.ownerId,
+      },
+      data: {
+        nfeEmitida: true,
+        // @ts-ignore
+        nfePdfUrl: pdfUrl,
+      },
+    });
+    
+    revalidatePath("/eventos");
+    return { success: true, pdfUrl };
+  } catch (error) {
+    console.error("Erro ao fazer upload do PDF da nota fiscal em lote:", error);
+    return { success: false, message: "Erro ao atualizar nota fiscal com arquivo." };
   }
 }
 

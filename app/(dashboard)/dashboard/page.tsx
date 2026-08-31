@@ -256,7 +256,7 @@ export default function Dashboard() {
       </PageHeader>
 
       <main className="flex-1 overflow-y-auto space-y-6 px-4 py-5 md:px-8 md:py-6">
-        {}
+        { }
         <DashboardFilters
           modo={modo}
           pa={pa}
@@ -272,7 +272,7 @@ export default function Dashboard() {
         <DashboardKpis A={A} B={B} limiteGlobal={limiteGlobal} />
 
 
-        {}
+        { }
         <section className="grid gap-2.5 lg:grid-cols-3">
           <div className="rounded-xl bg-surface p-4 lg:col-span-2 shadow-sm">
             <div className="mb-3 flex items-baseline justify-between">
@@ -280,7 +280,7 @@ export default function Dashboard() {
                 Faturamento por dia
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
+                    <button suppressHydrationWarning className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
                       <Info className="h-4 w-4" />
                     </button>
                   </PopoverTrigger>
@@ -333,7 +333,7 @@ export default function Dashboard() {
                 % de perda por dia
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
+                    <button suppressHydrationWarning className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
                       <Info className="h-4 w-4" />
                     </button>
                   </PopoverTrigger>
@@ -372,9 +372,9 @@ export default function Dashboard() {
           </div>
         </section>
 
-        {}
+        { }
         <div className="grid gap-4 lg:grid-cols-2 xl:gap-6 mt-2">
-          {}
+          { }
           <div className="lg:col-span-1">
             <CriticalItems itens={desperdicios} />
           </div>
@@ -394,14 +394,14 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {}
+        { }
         <Card className="mt-4 shadow-sm border-border">
           <CardHeader className="flex flex-row items-center justify-between pb-4 gap-3 space-y-0">
             <CardTitle className="text-[13px] font-medium flex items-center gap-1.5">
               Produtos · {rotulo(modo, pa)}
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
+                  <button suppressHydrationWarning className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
                     <Info className="h-4 w-4" />
                   </button>
                 </PopoverTrigger>
@@ -425,7 +425,7 @@ export default function Dashboard() {
           </CardHeader>
 
           <CardContent className="p-0">
-            {}
+            { }
             <ul className="space-y-2.5 md:hidden px-4 pb-4">
               {tabela.map((l) => (
                 <li key={l.codigo} className="rounded-lg bg-surface-2 px-3 py-2.5">
@@ -444,83 +444,83 @@ export default function Dashboard() {
               ))}
             </ul>
 
-            {}
+            { }
             <div className="hidden md:block max-h-[500px] overflow-auto relative">
               <table className="w-full caption-bottom text-sm">
                 <TableHeader>
-                    <TableRow className="bg-card text-[11px] uppercase tracking-wider hover:bg-card border-0">
-                      <TableHead className="bg-card font-medium text-left">Código</TableHead>
-                      <TableHead className="bg-card font-medium text-left">Produto</TableHead>
-                      <TableHead className="bg-card font-medium text-right">Chegou</TableHead>
-                      <TableHead className="bg-card font-medium text-right">Vendeu</TableHead>
-                      <TableHead className="bg-card font-medium text-right">Perdeu</TableHead>
-                      <TableHead className="bg-card font-medium text-right">% perda</TableHead>
-                      <TableHead className="bg-card font-medium text-right">Saída</TableHead>
-                      <TableHead className="bg-card font-medium text-right">Faturou</TableHead>
-                      <TableHead className="bg-card font-medium text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          Lucro
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button className="text-muted-foreground hover:text-foreground">
-                                <Info className="h-3 w-3" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent side="top" align="center" className="w-64 text-sm p-4 bg-slate-900 border-slate-800 shadow-xl">
-                              <p className="text-xs text-slate-300">
-                                <strong>Lucro Bruto:</strong> Faturamento - ((Qtd Vendida + Qtd Perdida) × Custo unitário).
-                                <br/><br/>
-                                <em>Isso significa que o custo do estoque restante que não foi vendido nem jogado fora não afeta o lucro.</em>
-                              </p>
-                              <PopoverPrimitive.Arrow className="fill-slate-900" width={16} height={8} />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </TableHead>
-                      <TableHead className="bg-card font-medium text-right pr-4">
-                        <div className="flex items-center justify-end gap-1">
-                          Markup
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <button className="text-muted-foreground hover:text-foreground">
-                                <Info className="h-3 w-3" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent side="top" align="center" className="w-64 text-sm p-4 bg-slate-900 border-slate-800 shadow-xl">
-                              <p className="text-xs text-slate-300">
-                                <strong>Markup (Multiplicador):</strong> Preço de Venda ÷ Custo.
-                                <br/><br/>
-                                <em>Um markup de 1.50x significa que o produto é vendido 50% mais caro do que o custo de compra.</em>
-                              </p>
-                              <PopoverPrimitive.Arrow className="fill-slate-900" width={16} height={8} />
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </TableHead>
+                  <TableRow className="bg-card text-[11px] uppercase tracking-wider hover:bg-card border-0">
+                    <TableHead className="bg-card font-medium text-left">Código</TableHead>
+                    <TableHead className="bg-card font-medium text-left">Produto</TableHead>
+                    <TableHead className="bg-card font-medium text-right">Chegou</TableHead>
+                    <TableHead className="bg-card font-medium text-right">Vendeu</TableHead>
+                    <TableHead className="bg-card font-medium text-right">Perdeu</TableHead>
+                    <TableHead className="bg-card font-medium text-right">% perda</TableHead>
+                    <TableHead className="bg-card font-medium text-right">Saída</TableHead>
+                    <TableHead className="bg-card font-medium text-right">Faturou</TableHead>
+                    <TableHead className="bg-card font-medium text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        Lucro
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button suppressHydrationWarning className="text-muted-foreground hover:text-foreground">
+                              <Info className="h-3 w-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="top" align="center" className="w-64 text-sm p-4 bg-slate-900 border-slate-800 shadow-xl">
+                            <p className="text-xs text-slate-300">
+                              <strong>Lucro Bruto:</strong> Faturamento - ((Qtd Vendida + Qtd Perdida) × Custo unitário).
+                              <br /><br />
+                              <em>Isso significa que o custo do estoque restante que não foi vendido nem jogado fora não afeta o lucro.</em>
+                            </p>
+                            <PopoverPrimitive.Arrow className="fill-slate-900" width={16} height={8} />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </TableHead>
+                    <TableHead className="bg-card font-medium text-right pr-4">
+                      <div className="flex items-center justify-end gap-1">
+                        Markup
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button suppressHydrationWarning className="text-muted-foreground hover:text-foreground">
+                              <Info className="h-3 w-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="top" align="center" className="w-64 text-sm p-4 bg-slate-900 border-slate-800 shadow-xl">
+                            <p className="text-xs text-slate-300">
+                              <strong>Markup (Multiplicador):</strong> Preço de Venda ÷ Custo.
+                              <br /><br />
+                              <em>Um markup de 1.50x significa que o produto é vendido 50% mais caro do que o custo de compra.</em>
+                            </p>
+                            <PopoverPrimitive.Arrow className="fill-slate-900" width={16} height={8} />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="tabular-nums">
+                  {tabela.map((l) => (
+                    <TableRow key={l.codigo}>
+                      <TableCell className="py-2.5 text-muted-foreground font-mono text-xs">
+                        {l.codigo}
+                      </TableCell>
+                      <TableCell className="max-w-[220px] truncate py-2.5">
+                        {l.descricao}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right">{num(l.chegou)}</TableCell>
+                      <TableCell className="py-2.5 text-right">{num(l.vendido)}</TableCell>
+                      <TableCell className="py-2.5 text-right">{num(l.perdido)}</TableCell>
+                      <TableCell className={`py-2.5 text-right ${l.perdaPct > l.limite ? "text-negative font-medium" : "text-positive"}`}>
+                        {pct(l.perdaPct)}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right">{l.giro.toFixed(0)}%</TableCell>
+                      <TableCell className="py-2.5 text-right">{brl(l.faturou)}</TableCell>
+                      <TableCell className="py-2.5 text-right">{brl(l.faturou - (l.vendido * l.custo) - (l.perdido * l.custo))}</TableCell>
+                      <TableCell className="py-2.5 text-right pr-4">{(l.precoVenda / l.custo).toFixed(2)}x</TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody className="tabular-nums">
-                    {tabela.map((l) => (
-                      <TableRow key={l.codigo}>
-                        <TableCell className="py-2.5 text-muted-foreground font-mono text-xs">
-                          {l.codigo}
-                        </TableCell>
-                        <TableCell className="max-w-[220px] truncate py-2.5">
-                          {l.descricao}
-                        </TableCell>
-                        <TableCell className="py-2.5 text-right">{num(l.chegou)}</TableCell>
-                        <TableCell className="py-2.5 text-right">{num(l.vendido)}</TableCell>
-                        <TableCell className="py-2.5 text-right">{num(l.perdido)}</TableCell>
-                        <TableCell className={`py-2.5 text-right ${l.perdaPct > l.limite ? "text-negative font-medium" : "text-positive"}`}>
-                          {pct(l.perdaPct)}
-                        </TableCell>
-                        <TableCell className="py-2.5 text-right">{l.giro.toFixed(0)}%</TableCell>
-                        <TableCell className="py-2.5 text-right">{brl(l.faturou)}</TableCell>
-                        <TableCell className="py-2.5 text-right">{brl(l.faturou - (l.vendido * l.custo) - (l.perdido * l.custo))}</TableCell>
-                        <TableCell className="py-2.5 text-right pr-4">{(l.precoVenda / l.custo).toFixed(2)}x</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
+                  ))}
+                </TableBody>
               </table>
               {tabela.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</p>

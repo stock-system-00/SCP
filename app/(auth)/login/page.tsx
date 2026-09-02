@@ -73,9 +73,9 @@ export default function LoginPage() {
               </div>
             </div>
           </CardContent>
-          {/* 
           <CardFooter className="flex flex-col gap-4 pt-4">
             <Button
+              type="submit"
               className="w-full"
               disabled={isLoading}
             >
@@ -93,7 +93,7 @@ export default function LoginPage() {
                 Fale com o suporte
               </button>
             </p>
-          </CardFooter> */}
+          </CardFooter>
         </form>
       </Card>
     </div>

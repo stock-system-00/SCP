@@ -215,7 +215,7 @@ export function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[95vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md w-full max-w-full h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[95vh] p-4 sm:p-6 rounded-none sm:rounded-lg border-0 sm:border flex flex-col overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {editMode ? "Completar Cadastro" : "Adicionar Evidência Detalhada"}
@@ -459,7 +459,7 @@ export function UploadDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="mt-auto pt-4 sm:pt-0">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

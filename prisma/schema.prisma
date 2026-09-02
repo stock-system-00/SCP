@@ -258,6 +258,7 @@ model Motivo {
 model Configuracao {
   id                         String  @id @default(uuid())
   empresaNome                String  @default("Minha Empresa")
+  empresaCnpj                String?
   exigirFoto                 Boolean @default(false)
   bloquearAprovados          Boolean @default(true)
   limiteDiario               Decimal @default(1000.00) @db.Decimal(10, 2)

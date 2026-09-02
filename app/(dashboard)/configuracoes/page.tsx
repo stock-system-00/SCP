@@ -44,7 +44,9 @@ import {
   getUsers,
   saveUser,
   deleteUser,
+  saveLoja,
 } from "@/app/actions/configuracoes";
+import { LojaFormDialog } from "@/components/configuracoes/loja-form-dialog";
 import { getMinhasLojas } from "@/app/actions/auth";
 import {
   AlertTriangle,
@@ -56,6 +58,7 @@ import {
   Trash2,
   Plus,
   Loader2,
+  Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -84,6 +87,9 @@ export default function ConfiguracoesPage() {
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
+  const [showLojaDialog, setShowLojaDialog] = useState(false);
+  const [lojaToEdit, setLojaToEdit] = useState<any | null>(null);
 
   useEffect(() => {
     loadData();
@@ -161,6 +167,27 @@ export default function ConfiguracoesPage() {
     setShowUserDialog(true);
   };
 
+  const handleSaveLoja = async (lojaData: { id?: string; nome: string; cnpj: string }) => {
+    if (!lojaData.nome) {
+      toast.error("Nome da filial é obrigatório");
+      return;
+    }
+    const result = await saveLoja(lojaData);
+    if (result.success) {
+      toast.success(lojaToEdit ? "Filial atualizada!" : "Filial criada com sucesso!");
+      loadData();
+      setShowLojaDialog(false);
+      setLojaToEdit(null);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  const handleEditLoja = (loja: any) => {
+    setLojaToEdit(loja);
+    setShowLojaDialog(true);
+  };
+
   const handleDeleteUser = async () => {
     if (userToDelete) {
       if (userToDelete === currentUser?.id) {
@@ -212,6 +239,7 @@ export default function ConfiguracoesPage() {
         <Tabs defaultValue="geral" className="space-y-6">
         <TabsList>
           <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="filiais">Filiais</TabsTrigger>
           <TabsTrigger value="usuarios">Usuários</TabsTrigger>
           <TabsTrigger value="permissoes">Acessos</TabsTrigger>
         </TabsList>
@@ -221,10 +249,10 @@ export default function ConfiguracoesPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Dados da Empresa
+                Conta Principal
               </CardTitle>
               <CardDescription>
-                Informações básicas da organização
+                Informações da conta administradora do sistema
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -233,33 +261,20 @@ export default function ConfiguracoesPage() {
                   <Loader2 className="animate-spin h-6 w-6" />
                 </div>
               ) : (
-                <>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="empresa">Nome da Empresa</Label>
-                      <Input
-                        id="empresa"
-                        value={settings.empresaNome}
-                        onChange={(e) =>
-                          setSettings({
-                            ...settings,
-                            empresaNome: e.target.value,
-                          })
-                        }
-                        placeholder="Supermercado Exemplo Ltda"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cnpj">CNPJ (Opcional)</Label>
-                      <Input id="cnpj" placeholder="00.000.000/0000-00" />
-                    </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="master-email">E-mail Master</Label>
+                    <Input
+                      id="master-email"
+                      value={currentUser?.email || ""}
+                      disabled
+                      className="bg-muted/50"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      As filiais (empresas) são gerenciadas na aba "Filiais".
+                    </p>
                   </div>
-                  <div className="flex justify-end">
-                    <Button onClick={handleSaveSettings}>
-                      Salvar Alterações
-                    </Button>
-                  </div>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -461,6 +476,67 @@ export default function ConfiguracoesPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="filiais" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Store className="h-5 w-5" />
+                  Filiais / Lojas
+                </CardTitle>
+                <CardDescription>
+                  Gerencie as filiais da sua empresa
+                </CardDescription>
+              </div>
+              <Button
+                onClick={() => {
+                  setLojaToEdit(null);
+                  setShowLojaDialog(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Filial
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-card hover:bg-card border-0 text-[11px] uppercase tracking-wider">
+                    <TableHead className="bg-card font-medium">Nome</TableHead>
+                    <TableHead className="bg-card font-medium">CNPJ</TableHead>
+                    <TableHead className="bg-card font-medium w-24">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lojas.map((loja) => (
+                    <TableRow key={loja.id}>
+                      <TableCell className="font-medium">{loja.nome}</TableCell>
+                      <TableCell className="text-muted-foreground">{loja.cnpj || "-"}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEditLoja(loja)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {lojas.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-6">
+                        Nenhuma filial encontrada.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="permissoes" className="space-y-6">
           <Card>
             <CardHeader>
@@ -605,6 +681,18 @@ export default function ConfiguracoesPage() {
         onSave={handleSaveUser}
         lojas={lojas}
         currentUser={currentUser}
+      />
+
+      <LojaFormDialog
+        open={showLojaDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowLojaDialog(false);
+            setLojaToEdit(null);
+          }
+        }}
+        lojaToEdit={lojaToEdit}
+        onSave={handleSaveLoja}
       />
 
       <AlertDialog

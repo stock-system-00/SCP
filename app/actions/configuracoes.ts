@@ -48,6 +48,7 @@ export async function getSettings() {
 
 export async function saveSettings(data: {
   empresaNome: string;
+  empresaCnpj?: string;
   exigirFoto: boolean;
   bloquearAprovados: boolean;
   permitirFuncionarioGaleria: boolean;
@@ -61,6 +62,9 @@ export async function saveSettings(data: {
   try {
     const dataToUpdate = {
       empresaNome: data.empresaNome,
+      ...(data.empresaCnpj !== undefined && {
+        empresaCnpj: data.empresaCnpj,
+      }),
       exigirFoto: data.exigirFoto,
       bloquearAprovados: data.bloquearAprovados,
       permitirFuncionarioGaleria: data.permitirFuncionarioGaleria,
@@ -271,5 +275,44 @@ export async function deleteUser(id: string) {
     return { success: true };
   } catch (error) {
     return { success: false, message: "Erro ao excluir usuário." };
+  }
+}
+
+export async function saveLoja(data: { id?: string; nome: string; cnpj: string }) {
+  const auth = await requireServerPermission("configuracoes:ver");
+  if (!auth.success) return auth;
+  const session = auth.session;
+
+  if (session.role !== "dono" && session.role !== "gestor") {
+    return { success: false, message: "Apenas donos e gestores podem gerenciar filiais." };
+  }
+
+  try {
+    if (data.id) {
+      // Verifica permissão
+      const loja = await prisma.loja.findUnique({ where: { id: data.id } });
+      if (!loja || loja.ownerId !== session.ownerId) {
+        return { success: false, message: "Acesso negado." };
+      }
+      
+      await prisma.loja.update({
+        where: { id: data.id },
+        data: { nome: data.nome, cnpj: data.cnpj },
+      });
+    } else {
+      await prisma.loja.create({
+        data: {
+          nome: data.nome,
+          cnpj: data.cnpj,
+          ownerId: session.ownerId,
+        },
+      });
+    }
+
+    revalidatePath("/configuracoes");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao salvar filial:", error);
+    return { success: false, message: "Erro ao salvar filial." };
   }
 }

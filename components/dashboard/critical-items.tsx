@@ -27,7 +27,7 @@ export function CriticalItems({ itens }: CriticalItemsProps) {
           Top 5 Desperdícios
           <Popover>
             <PopoverTrigger asChild>
-              <button className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
+              <button suppressHydrationWarning className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
                 <Info className="h-4 w-4" />
               </button>
             </PopoverTrigger>

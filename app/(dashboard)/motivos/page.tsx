@@ -222,7 +222,7 @@ export default function MotivosPage() {
 
                   {}
                   {(hasPermission("motivos:editar") ||
-                    hasPermission("motivos:excluir")) && (
+                    hasPermission("motivos:excluir")) && motivo.id !== "fixed-devolucao" && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button

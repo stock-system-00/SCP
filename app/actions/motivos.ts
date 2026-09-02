@@ -14,6 +14,19 @@ export async function getMotivos() {
       where: { ownerId: session.ownerId },
       orderBy: { nome: "asc" },
     });
+    
+    // Injeta o motivo fixo "Devolução" se não existir
+    const temDevolucao = motivos.some(m => m.nome.toLowerCase() === "devolução");
+    if (!temDevolucao) {
+      motivos.unshift({ 
+        id: "fixed-devolucao", 
+        nome: "Devolução", 
+        ownerId: session.ownerId, 
+        createdAt: new Date(), 
+        updatedAt: new Date() 
+      });
+    }
+
     return { success: true, data: motivos };
   } catch (error) {
     return { success: false, data: [] };
@@ -75,6 +88,10 @@ export async function createMotivo(nome: string) {
 export async function updateMotivo(id: string, nome: string) {
   const session = await getSession();
   if (!session) return { success: false, message: "Não autorizado" };
+
+  if (id === "fixed-devolucao") {
+    return { success: false, message: "O motivo 'Devolução' é fixo e não pode ser editado." };
+  }
 
   try {
     const nomeFormatado = nome.trim();
@@ -142,6 +159,10 @@ export async function updateMotivo(id: string, nome: string) {
 export async function deleteMotivo(id: string) {
   const session = await getSession();
   if (!session) return { success: false, message: "Não autorizado" };
+
+  if (id === "fixed-devolucao") {
+    return { success: false, message: "O motivo 'Devolução' é fixo e não pode ser excluído." };
+  }
 
   try {
 

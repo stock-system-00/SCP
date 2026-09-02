@@ -160,6 +160,38 @@ export default function Dashboard() {
   const [modo, setModo] = useState<Modo>("semana");
   const [pa, setPa] = useState("2026-W33");
   const [pb, setPb] = useState("2026-W32");
+
+  useEffect(() => {
+    const saved = localStorage.getItem("dashboard_modo") as Modo | null;
+    if (saved && ["dia", "semana", "mes"].includes(saved)) {
+      setModo(saved);
+      if (saved === "dia") {
+        setPa("2026-08-14");
+        setPb("2026-08-13");
+      } else if (saved === "semana") {
+        setPa("2026-W33");
+        setPb("2026-W32");
+      } else {
+        setPa("2026-08");
+        setPb("2026-07");
+      }
+    }
+  }, []);
+
+  const handleModoChange = (m: Modo) => {
+    setModo(m);
+    localStorage.setItem("dashboard_modo", m);
+    if (m === "dia") {
+      setPa("2026-08-14");
+      setPb("2026-08-13");
+    } else if (m === "semana") {
+      setPa("2026-W33");
+      setPb("2026-W32");
+    } else {
+      setPa("2026-08");
+      setPb("2026-07");
+    }
+  };
   const [busca, setBusca] = useState("");
   const [limiteGlobal, setLimiteGlobal] = useState(2);
 
@@ -230,19 +262,7 @@ export default function Dashboard() {
           {(["dia", "semana", "mes"] as Modo[]).map((m) => (
             <button
               key={m}
-              onClick={() => {
-                setModo(m);
-                if (m === "dia") {
-                  setPa("2026-08-14");
-                  setPb("2026-08-13");
-                } else if (m === "semana") {
-                  setPa("2026-W33");
-                  setPb("2026-W32");
-                } else {
-                  setPa("2026-08");
-                  setPb("2026-07");
-                }
-              }}
+              onClick={() => handleModoChange(m)}
               className={`rounded-md px-3 py-1.5 capitalize transition-colors ${modo === m ? "bg-surface-3 text-foreground" : "text-muted-foreground hover:text-foreground"
                 }`}
             >
@@ -295,11 +315,13 @@ export default function Dashboard() {
             </div>
             <div className="h-56 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={serie} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                <LineChart data={serie} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                   <CartesianGrid stroke="var(--surface-3)" vertical={false} />
                   <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={45} axisLine={false} tickLine={false} tickFormatter={(val) => val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val} />
                   <Tooltip
+                    allowEscapeViewBox={{ x: true, y: true }}
+                    wrapperStyle={{ zIndex: 100 }}
                     itemStyle={{ color: "#f1f5f9" }}
                     contentStyle={{
                       background: "#0f172a",
@@ -346,11 +368,13 @@ export default function Dashboard() {
             </div>
             <div className="h-56 md:h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={serie} margin={{ top: 4, right: 8, bottom: 0, left: -22 }}>
+                <BarChart data={serie} margin={{ top: 4, right: 8, bottom: 0, left: -10 }}>
                   <CartesianGrid stroke="var(--surface-3)" vertical={false} />
                   <XAxis dataKey="dia" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={30} axisLine={false} tickLine={false} />
                   <Tooltip
+                    allowEscapeViewBox={{ x: true, y: true }}
+                    wrapperStyle={{ zIndex: 100 }}
                     cursor={{ fill: "var(--surface-2)" }}
                     formatter={(value: number) => [`${value.toFixed(1)}%`, "Perda"]}
                     itemStyle={{ color: "#f1f5f9" }}
@@ -426,7 +450,6 @@ export default function Dashboard() {
                       perda {pct(l.perdaPct)}
                     </span>
                     <span>saída {l.giro.toFixed(0)}%</span>
-                    <StatusTag status={l.status} />
                   </div>
                 </li>
               ))}

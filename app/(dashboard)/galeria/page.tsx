@@ -97,6 +97,7 @@ export default function GaleriaPage() {
 
 
   const [selectedDate, setSelectedDate] = useState<string>("todas");
+  const [selectedMotivo, setSelectedMotivo] = useState<string>("todos");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Paginação
@@ -267,12 +268,27 @@ export default function GaleriaPage() {
     });
   }, [evidencias]);
 
+  const uniqueMotivos = useMemo(() => {
+    const motivos = new Set<string>();
+    evidencias.forEach((ev) => {
+      if (ev.evento?.motivo) motivos.add(ev.evento.motivo);
+      else if (ev.motivo) motivos.add(ev.motivo);
+    });
+    return Array.from(motivos).sort();
+  }, [evidencias]);
+
   const filteredEvidencias = useMemo(() => {
     let filtered = evidencias;
 
     if (selectedDate !== "todas") {
       filtered = filtered.filter(
         (ev) => formatDate(ev.dataUpload) === selectedDate,
+      );
+    }
+
+    if (selectedMotivo !== "todos") {
+      filtered = filtered.filter(
+        (ev) => ev.evento?.motivo === selectedMotivo || ev.motivo === selectedMotivo
       );
     }
 
@@ -289,7 +305,7 @@ export default function GaleriaPage() {
     }
 
     return filtered;
-  }, [evidencias, selectedDate, searchQuery]);
+  }, [evidencias, selectedDate, selectedMotivo, searchQuery]);
 
   const totalPages = Math.ceil(filteredEvidencias.length / ITEMS_PER_PAGE);
   const paginatedEvidencias = useMemo(() => {
@@ -392,6 +408,19 @@ export default function GaleriaPage() {
               className="pl-9"
             />
           </div>
+          <Select value={selectedMotivo} onValueChange={(v) => { setSelectedMotivo(v); setCurrentPage(1); }}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filtrar por motivo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os motivos</SelectItem>
+              {uniqueMotivos.map((motivo) => (
+                <SelectItem key={motivo} value={motivo}>
+                  {motivo}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={selectedDate} onValueChange={(v) => { setSelectedDate(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-full sm:w-48">
               <Calendar className="mr-2 h-4 w-4" />
@@ -484,17 +513,17 @@ export default function GaleriaPage() {
 
         {}
         <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
-          <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden bg-black/95 border-none [&>button]:hidden">
+          <DialogContent className="w-screen h-[100dvh] max-w-none sm:max-w-4xl sm:h-auto sm:max-h-[90vh] p-0 gap-0 overflow-hidden bg-black/95 border-none [&>button]:hidden rounded-none sm:rounded-lg">
             <DialogTitle className="sr-only">Visualizar Evidência</DialogTitle>
 
             <div className="relative w-full h-full flex flex-col">
               {}
-              <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-50 bg-linear-to-b from-black/80 to-transparent">
-                <div>
-                  <h2 className="text-white font-medium text-sm">
+              <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-start z-50 bg-gradient-to-b from-black/90 via-black/60 to-transparent pt-6 sm:pt-4">
+                <div className="drop-shadow-md">
+                  <h2 className="text-white font-semibold text-sm drop-shadow-lg">
                     {selectedPhoto?.evento?.item?.nome || "Foto Avulsa"}
                   </h2>
-                  <p className="text-white/70 text-xs">
+                  <p className="text-white/90 text-xs font-medium drop-shadow-lg mt-0.5">
                     {selectedPhoto && formatDateTime(selectedPhoto.dataUpload)}
                   </p>
                 </div>
@@ -509,7 +538,7 @@ export default function GaleriaPage() {
               </div>
 
               {}
-              <div className="relative flex-1 bg-black min-h-[50vh] max-h-[80vh] flex items-center justify-center">
+              <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
                 {selectedPhoto && (
                   <img
                     src={selectedPhoto.url || "/placeholder.svg"}
@@ -573,18 +602,34 @@ export default function GaleriaPage() {
                             {selectedPhoto.evento.unidade}
                           </strong>
                         </p>
-                        <p className="text-sm text-muted-foreground">
-                          Motivo: {selectedPhoto.evento.motivo}
-                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-muted-foreground">Motivo:</span>
+                          <Badge 
+                            variant="outline" 
+                            className={selectedPhoto.evento.motivo?.toLowerCase() === "devolução" 
+                              ? "bg-amber-100/50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700" 
+                              : "text-muted-foreground"}
+                          >
+                            {selectedPhoto.evento.motivo}
+                          </Badge>
+                        </div>
                       </>
                     ) : (
                       <div>
                         <Badge variant="secondary" className="mb-1">
                           Avulso
                         </Badge>
-                        <p className="text-sm">
-                          Motivo: {selectedPhoto?.motivo || "-"}
-                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-muted-foreground">Motivo:</span>
+                          <Badge 
+                            variant="outline" 
+                            className={selectedPhoto?.motivo?.toLowerCase() === "devolução" 
+                              ? "bg-amber-100/50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700" 
+                              : "text-muted-foreground"}
+                          >
+                            {selectedPhoto?.motivo || "-"}
+                          </Badge>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -594,26 +639,25 @@ export default function GaleriaPage() {
                     {}
                     <Button
                       variant="secondary"
-                      size="sm"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
                       onClick={() =>
                         selectedPhoto && openEditDialog(selectedPhoto)
                       }
                     >
-                      <Edit className="mr-2 h-4 w-4" />{" "}
-                      {selectedPhoto?.evento
-                        ? "Ver Detalhes"
-                        : "Completar Cadastro"}
+                      <Edit className="h-4 w-4" />
                     </Button>
 
                     {hasPermission("galeria:excluir") && (
                       <Button
                         variant="destructive"
-                        size="sm"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
                         onClick={() => {
                           setPhotoToDelete(selectedPhoto);
                         }}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
                   </div>

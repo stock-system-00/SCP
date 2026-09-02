@@ -213,10 +213,18 @@ export default function MotivosPage() {
               {filteredMotivos.map((motivo) => (
                 <div
                   key={motivo.id}
-                  className="group flex items-center gap-2 pl-4 pr-2 py-2 rounded-full border bg-background hover:border-primary/50 transition-colors shadow-xs"
+                  className={`group flex items-center gap-2 pl-4 pr-2 py-2 rounded-full border transition-colors shadow-xs ${
+                    motivo.nome.toLowerCase() === "devolução"
+                      ? "bg-amber-100/50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-700 hover:border-amber-400"
+                      : "bg-background hover:border-primary/50"
+                  }`}
                 >
-                  <span className="font-medium text-sm flex items-center gap-2">
-                    <Tag className="h-3 w-3 text-muted-foreground" />
+                  <span className={`font-medium text-sm flex items-center gap-2 ${
+                    motivo.nome.toLowerCase() === "devolução" ? "text-amber-700 dark:text-amber-400" : ""
+                  }`}>
+                    <Tag className={`h-3 w-3 ${
+                      motivo.nome.toLowerCase() === "devolução" ? "text-amber-600 dark:text-amber-500" : "text-muted-foreground"
+                    }`} />
                     {motivo.nome}
                   </span>
 

@@ -219,6 +219,15 @@ export async function updateEvidencia(
       ? new Date(data.dataPersonalizada)
       : undefined;
 
+    const targetEventoId = data.eventoId === "none" ? null : (data.eventoId || evidencia.eventoId);
+
+    if (data.motivo && targetEventoId) {
+      await prisma.evento.update({
+        where: { id: targetEventoId },
+        data: { motivo: data.motivo },
+      });
+    }
+
     await prisma.evidencia.update({
       where: { id },
       data: {

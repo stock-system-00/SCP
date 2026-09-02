@@ -36,7 +36,7 @@ export async function getDashboardStats() {
           notIn: ["rascunho", "rejeitado"],
         },
         motivo: {
-          not: "Devolução",
+          notIn: ["Devolução", "Devolucao", "devolução", "devolucao"],
         },
       },
       select: {
@@ -206,7 +206,7 @@ export async function getRealDashboardMetrics(diasIsoA: string[], diasIsoB: stri
 
 
     const eventos = await prisma.evento.findMany({
-      where: { ownerId: session.ownerId, ...(session.activeLojaId && { lojaId: session.activeLojaId }), dataHora: { gte: minDate, lte: maxDate }, status: { notIn: ["rascunho", "rejeitado"] }, motivo: { not: "Devolução" } }
+      where: { ownerId: session.ownerId, ...(session.activeLojaId && { lojaId: session.activeLojaId }), dataHora: { gte: minDate, lte: maxDate }, status: { notIn: ["rascunho", "rejeitado"] }, motivo: { notIn: ["Devolução", "Devolucao", "devolução", "devolucao"] } }
     });
 
 

@@ -446,12 +446,20 @@ export default function GaleriaPage() {
           <div className="flex-1 overflow-y-auto">
             <div className="grid gap-2 grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 pb-10">
               {paginatedEvidencias.map((evidencia, index) => (
-                <button
-                  key={evidencia.id}
-                  type="button"
-                  onClick={() => handlePhotoClick(evidencia, index)}
-                  className="group relative aspect-square w-full overflow-hidden rounded-md ring-1 ring-border/50 shadow-sm"
-                >
+                  <button
+                    key={evidencia.id}
+                    type="button"
+                    onClick={() => handlePhotoClick(evidencia, index)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      if (hasPermission("galeria:excluir")) {
+                        setPhotoToDelete(evidencia);
+                      } else {
+                        toast.error("Sem permissão para excluir fotos.");
+                      }
+                    }}
+                    className="group relative aspect-square w-full overflow-hidden rounded-md ring-1 ring-border/50 shadow-sm"
+                  >
                   <img
                     src={evidencia.url || "/placeholder.svg"}
                     alt={`Evidência ${index + 1}`}
@@ -538,7 +546,7 @@ export default function GaleriaPage() {
               </div>
 
               {}
-              <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+              <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden sm:min-h-[400px] sm:max-h-[70vh]">
                 {selectedPhoto && (
                   <img
                     src={selectedPhoto.url || "/placeholder.svg"}

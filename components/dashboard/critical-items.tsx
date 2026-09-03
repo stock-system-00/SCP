@@ -52,17 +52,15 @@ export function CriticalItems({ itens }: CriticalItemsProps) {
               return (
                 <div
                   key={entry.codigo}
-                  className="py-3 hover:bg-muted/50 transition-colors"
+                  className="py-3 "
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold text-sm shrink-0">
                       {index + 1}
                     </div>
-                    
-                    <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center shrink-0">
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    
+
+
+
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">
                         {entry.descricao}
@@ -82,7 +80,7 @@ export function CriticalItems({ itens }: CriticalItemsProps) {
                       </div>
                     </div>
                   </div>
-                  {}
+                  { }
                   <div className="mt-2 ml-11">
                     <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
                       <div

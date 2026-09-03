@@ -355,3 +355,59 @@ export async function getRealDashboardMetrics(diasIsoA: string[], diasIsoB: stri
   }
 }
 
+export async function getTopVendasGerais() {
+  try {
+    const auth = await requireServerPermission("dashboard:ver");
+    if (!auth.success) return { success: false, error: auth.message };
+    const session = auth.session;
+
+    const topVendasGeraisRaw = await prisma.vendaItem.groupBy({
+      by: ['itemId'],
+      where: {
+        vendaDiaria: { ownerId: session.ownerId }
+      },
+      _sum: {
+        quantidade: true,
+        valorLiquido: true,
+      },
+      orderBy: {
+        _sum: {
+          quantidade: 'desc'
+        }
+      },
+      take: 50
+    });
+
+    const itemIds = topVendasGeraisRaw.map((t: any) => t.itemId);
+    
+    const itemsDetails = await prisma.item.findMany({
+      where: { id: { in: itemIds } },
+      select: {
+        id: true,
+        codigoInterno: true,
+        nome: true,
+        unidade: true
+      }
+    });
+
+    const itemsMap = new Map(itemsDetails.map((i: any) => [i.id, i]));
+
+    const topVendasGerais = topVendasGeraisRaw.map((t: any) => {
+      const detail = itemsMap.get(t.itemId);
+      return {
+        itemId: t.itemId,
+        codigoInterno: detail?.codigoInterno || "-",
+        nome: detail?.nome || "Desconhecido",
+        unidade: detail?.unidade || "UN",
+        quantidade: Number(t._sum.quantidade || 0),
+        receita: Number(t._sum.valorLiquido || 0)
+      };
+    });
+
+    return { success: true, data: topVendasGerais };
+  } catch (error) {
+    console.error("Erro ao buscar top vendas:", error);
+    return { success: false, error: "Falha ao buscar top vendas." };
+  }
+}
+

@@ -20,6 +20,12 @@ export function HistoricoNFeList({ historico }: { historico: any[] }) {
   const searchParams = useSearchParams();
   const currentStatus = searchParams.get("status") || "todos";
 
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const handleStatusChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (val === "todos") {
@@ -36,16 +42,20 @@ export function HistoricoNFeList({ historico }: { historico: any[] }) {
       {}
       <div className="flex justify-between items-center bg-card/40 backdrop-blur-md p-3 rounded-2xl border border-border/50">
         <h2 className="text-sm font-semibold text-foreground px-2">Notas Importadas</h2>
-        <Select value={currentStatus} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[180px] bg-background">
-            <SelectValue placeholder="Filtrar por Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todas as Notas</SelectItem>
-            <SelectItem value="pendente">Pendente de Mapeamento</SelectItem>
-            <SelectItem value="mapeado">100% Mapeado</SelectItem>
-          </SelectContent>
-        </Select>
+        {mounted ? (
+          <Select value={currentStatus} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-[180px] bg-background">
+              <SelectValue placeholder="Filtrar por Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas as Notas</SelectItem>
+              <SelectItem value="pendente">Pendente de Mapeamento</SelectItem>
+              <SelectItem value="mapeado">100% Mapeado</SelectItem>
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="w-[180px] h-9 border rounded-md bg-background opacity-50" />
+        )}
       </div>
 
       {!historico || historico.length === 0 ? (

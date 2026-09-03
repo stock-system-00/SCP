@@ -25,7 +25,7 @@ import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { CriticalItems } from "@/components/dashboard/critical-items";
 import { DashboardKpis } from "@/components/dashboard/dashboard-kpis";
 import { DashboardFilters } from "@/components/dashboard/dashboard-filters";
-
+import { TopVendasList } from "@/components/vendas/TopVendasList";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -258,17 +258,20 @@ export default function Dashboard() {
         title="Painel de estufa"
         description={`${rotulo(modo, pa)} vs ${rotulo(modo, pb)} · ${num(A.xmlsImportados)} XMLs importados`}
       >
-        <div className="flex items-center gap-1 rounded-lg bg-surface p-0.5 text-xs">
-          {(["dia", "semana", "mes"] as Modo[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => handleModoChange(m)}
-              className={`rounded-md px-3 py-1.5 capitalize transition-colors ${modo === m ? "bg-surface-3 text-foreground" : "text-muted-foreground hover:text-foreground"
-                }`}
-            >
-              {m === "mes" ? "mês" : m}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <TopVendasList />
+          <div className="flex items-center gap-1 rounded-lg bg-surface p-0.5 text-xs">
+            {(["dia", "semana", "mes"] as Modo[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => handleModoChange(m)}
+                className={`rounded-md px-3 py-1.5 capitalize transition-colors ${modo === m ? "bg-surface-3 text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+              >
+                {m === "mes" ? "mês" : m}
+              </button>
+            ))}
+          </div>
         </div>
       </PageHeader>
 

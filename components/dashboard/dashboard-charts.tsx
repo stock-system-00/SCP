@@ -34,16 +34,16 @@ const categoryColors = [
 
 interface DashboardChartsProps {
 
-  serieDiaria: any[]; 
+  serieDiaria: any[];
 
-  produtosFiltrados: any[]; 
+  produtosFiltrados: any[];
 }
 
 export function DashboardCharts({
   serieDiaria,
   produtosFiltrados,
 }: DashboardChartsProps) {
-  
+
 
 
   const tendencia = serieDiaria.map(d => ({
@@ -60,7 +60,7 @@ export function DashboardCharts({
       catMap[p.categoria] = (catMap[p.categoria] || 0) + perdaValor;
     }
   });
-  
+
   const topCategorias = Object.entries(catMap)
     .map(([categoria, custo]) => ({ categoria, custo }))
     .sort((a, b) => b.custo - a.custo)
@@ -83,14 +83,14 @@ export function DashboardCharts({
   return (
     <div className="h-full">
 
-      {}
+      { }
       <div className="rounded-xl bg-surface p-4 shadow-sm flex flex-col h-full">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="text-[13px] font-medium flex items-center gap-1.5">
             Top Categorias
             <Popover>
               <PopoverTrigger asChild>
-                <button className="text-muted-foreground hover:text-foreground transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
+                <button className="text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full">
                   <Info className="h-4 w-4" />
                 </button>
               </PopoverTrigger>
@@ -127,7 +127,7 @@ export function DashboardCharts({
                     tick={customYAxisTick}
                   />
                   <XAxis type="number" hide />
-                  <ChartTooltip content={<ChartTooltipContent className="bg-slate-900 border-slate-800 text-slate-100 shadow-xl" />} />
+                  <ChartTooltip cursor={false} content={<ChartTooltipContent className="bg-slate-900 border-slate-800 text-slate-100 shadow-xl" />} />
                   <Bar dataKey="custo" radius={4} barSize={28}>
                     {topCategorias.map((_, index) => (
                       <Cell

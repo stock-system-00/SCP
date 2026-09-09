@@ -155,9 +155,13 @@ export async function importNFeXML(formData: FormData) {
     // Tentar mapear itens automaticamente
     const mappedItemsToSave = [];
     
-    // Buscar todos os códigos de fornecedor conhecidos dessa loja
+    // Buscar apenas os códigos de fornecedor presentes neste XML
+    const cProdList = itensNFe.map((i) => i.cProd);
     const mappedSuppliers = await prisma.itemFornecedor.findMany({
-      where: { item: { ownerId: user.ownerId } }
+      where: { 
+        item: { ownerId: user.ownerId },
+        codigoFornecedor: { in: cProdList }
+      }
     });
 
     for (const nfeItem of itensNFe) {
@@ -195,9 +199,9 @@ export async function importNFeXML(formData: FormData) {
     for (const m of mappedItemsToSave) {
       if (m.itemId) mappedIds.add(m.itemId);
     }
-    for (const id of Array.from(mappedIds)) {
-      await recalcularCustosItem(id, user.ownerId);
-    }
+    await Promise.all(
+      Array.from(mappedIds).map(id => recalcularCustosItem(id, user.ownerId))
+    );
 
     revalidatePath("/nfe-importacao");
     return { success: true, count: itensNFe.length, nfeId: nfe.id };
@@ -327,9 +331,9 @@ export async function deleteNFeImport(id: string) {
     });
 
 
-    for (const itemId of Array.from(mappedItemIds)) {
-      await recalcularCustosItem(itemId, user.ownerId);
-    }
+    await Promise.all(
+      Array.from(mappedItemIds).map(itemId => recalcularCustosItem(itemId, user.ownerId))
+    );
 
     revalidatePath("/nfe-importacao");
     return { success: true };

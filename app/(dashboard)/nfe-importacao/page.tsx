@@ -1,10 +1,9 @@
-import React from "react";
+
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { ImportNFeForm } from "@/components/nfe/ImportNFeForm";
 import { HistoricoNFeList } from "@/components/nfe/HistoricoNFeList";
-import { Receipt } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 import {
@@ -34,13 +33,40 @@ export default async function NFeImportacaoPage(props: {
   const skip = (page - 1) * pageSize;
 
   const statusFilter = searchParams?.status as string || "todos";
-
+  const searchQuery = searchParams?.search as string || "";
 
   const whereClause: any = { ownerId: user.ownerId };
+  whereClause.AND = [];
+
   if (statusFilter === "pendente") {
-    whereClause.itens = { some: { itemId: null } };
+    whereClause.AND.push({ itens: { some: { itemId: null } } });
   } else if (statusFilter === "mapeado") {
-    whereClause.itens = { every: { itemId: { not: null } } };
+    whereClause.AND.push({ itens: { every: { itemId: { not: null } } } });
+  }
+
+  if (searchQuery) {
+    whereClause.AND.push({
+      itens: {
+        some: {
+          OR: [
+            { codigoFornecedor: { contains: searchQuery, mode: "insensitive" } },
+            { descricaoFornecedor: { contains: searchQuery, mode: "insensitive" } },
+            {
+              item: {
+                OR: [
+                  { nome: { contains: searchQuery, mode: "insensitive" } },
+                  { codigoInterno: { contains: searchQuery, mode: "insensitive" } },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    });
+  }
+
+  if (whereClause.AND.length === 0) {
+    delete whereClause.AND;
   }
 
 
@@ -65,7 +91,7 @@ export default async function NFeImportacaoPage(props: {
   const historico = historicoRaw.map(nfe => {
     const totalItens = nfe.itens.length;
     const mapeados = nfe.itens.filter(i => i.itemId !== null).length;
-    
+
     return {
       ...nfe,
       valorTotal: nfe.valorTotal ? Number(nfe.valorTotal) : null,
@@ -81,35 +107,35 @@ export default async function NFeImportacaoPage(props: {
         description="Importe arquivos XML das notas fiscais e mapeie os produtos."
       />
       <main className="flex-1 space-y-6 px-4 py-5 md:px-8 md:py-6 overflow-y-auto">
-        {}
+        { }
         <div className="hidden md:block">
           <ImportNFeForm />
         </div>
 
-        {}
+        { }
         <div className="md:hidden bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-4 rounded-xl text-sm font-medium text-center">
           A importação de XML só está disponível pelo computador.
         </div>
 
         <div>
           <HistoricoNFeList historico={historico} />
-          
+
           {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
-                      href={page > 1 ? `/nfe-importacao?page=${page - 1}` : "#"} 
+                    <PaginationPrevious
+                      href={page > 1 ? `/nfe-importacao?page=${page - 1}` : "#"}
                       className={page <= 1 ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
-                  
+
                   {Array.from({ length: totalPages }).map((_, i) => {
                     const pageNumber = i + 1;
                     return (
                       <PaginationItem key={pageNumber}>
-                        <PaginationLink 
+                        <PaginationLink
                           href={`/nfe-importacao?page=${pageNumber}`}
                           isActive={pageNumber === page}
                         >
@@ -118,10 +144,10 @@ export default async function NFeImportacaoPage(props: {
                       </PaginationItem>
                     );
                   })}
-                  
+
                   <PaginationItem>
-                    <PaginationNext 
-                      href={page < totalPages ? `/nfe-importacao?page=${page + 1}` : "#"} 
+                    <PaginationNext
+                      href={page < totalPages ? `/nfe-importacao?page=${page + 1}` : "#"}
                       className={page >= totalPages ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>

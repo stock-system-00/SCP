@@ -56,6 +56,7 @@ export default function EventosPage() {
   const [loteSelecionado, setLoteSelecionado] = useState<LoteDiario | null>(
     null,
   );
+  const [viewMode, setViewMode] = useState<ViewMode>("pastas");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [globalSearch, setGlobalSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -111,7 +112,11 @@ export default function EventosPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateRange, globalSearch, statusFilter, loteSelecionado]);
+  }, [dateRange, globalSearch, statusFilter, loteSelecionado, viewMode]);
+
+  useEffect(() => {
+    setLoteSelecionado(null);
+  }, [viewMode]);
 
   const eventosFiltradosGlobalmente = useMemo(() => {
     return eventosDoBanco.filter((evento) => {
@@ -182,12 +187,18 @@ export default function EventosPage() {
 
   const dadosPaginados = useMemo(() => {
     let dados: any[] = [];
-    const itemsPerPage = !loteSelecionado ? 10 : 15;
+    let itemsPerPage = 10;
+    
+    if (loteSelecionado || viewMode === "lista-completa") {
+      itemsPerPage = 15;
+    }
 
     if (loteSelecionado) {
       dados = eventosFiltradosGlobalmente.filter(
         (e) => formatDate(e.dataHora) === loteSelecionado.data,
       );
+    } else if (viewMode === "lista-completa") {
+      dados = [...eventosFiltradosGlobalmente].sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
     } else {
       dados = lotesDiarios;
     }
@@ -207,6 +218,7 @@ export default function EventosPage() {
     lotesDiarios,
     eventosFiltradosGlobalmente,
     currentPage,
+    viewMode,
   ]);
 
   const handleStatusChange = async (eventoId: string, novoStatus: string) => {
@@ -423,6 +435,8 @@ export default function EventosPage() {
         setStatusFilter={setStatusFilter}
         dateRange={dateRange}
         setDateRange={setDateRange}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
       />
 
       <div className="flex-1 min-h-0 border rounded-md bg-card relative overflow-hidden shadow-sm">
@@ -433,6 +447,13 @@ export default function EventosPage() {
             <div className="flex justify-center items-center h-full gap-2 text-muted-foreground">
               <Loader2 className="h-6 w-6 animate-spin" /> Carregando...
             </div>
+          ) : viewMode === "lista-completa" ? (
+            <EventosTable
+              data={dadosPaginados.currentItems as Evento[]}
+              onStatusChange={handleStatusChange}
+              onDelete={setEventoToDelete}
+              onViewDetails={(ev) => console.log("Detalhes", ev)}
+            />
           ) : (
             <EventosGrid
               lotes={dadosPaginados.currentItems as LoteDiario[]}

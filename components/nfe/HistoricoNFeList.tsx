@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FileText, ArrowRight, CalendarDays, DollarSign, Package, CheckCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Select,
@@ -19,12 +20,31 @@ export function HistoricoNFeList({ historico }: { historico: any[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentStatus = searchParams.get("status") || "todos";
+  const currentSearch = searchParams.get("search") || "";
 
   const [mounted, setMounted] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState(currentSearch);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
+
+  React.useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchTerm) {
+        params.set("search", searchTerm);
+      } else {
+        params.delete("search");
+      }
+      if (searchTerm !== currentSearch) {
+        params.delete("page");
+        router.push(`?${params.toString()}`);
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm, searchParams, router, currentSearch]);
 
   const handleStatusChange = (val: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -40,21 +60,36 @@ export function HistoricoNFeList({ historico }: { historico: any[] }) {
   return (
     <div className="w-full space-y-4">
       {}
-      <div className="flex justify-between items-center bg-card/40 backdrop-blur-md p-3 rounded-2xl border border-border/50">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card/40 backdrop-blur-md p-3 rounded-2xl border border-border/50">
         <h2 className="text-sm font-semibold text-foreground px-2">Notas Importadas</h2>
         {mounted ? (
-          <Select value={currentStatus} onValueChange={handleStatusChange}>
-            <SelectTrigger className="w-[180px] bg-background">
-              <SelectValue placeholder="Filtrar por Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todas as Notas</SelectItem>
-              <SelectItem value="pendente">Pendente de Mapeamento</SelectItem>
-              <SelectItem value="mapeado">100% Mapeado</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Pesquisar item, código..."
+                className="pl-9 bg-background w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={currentStatus} onValueChange={handleStatusChange}>
+              <SelectTrigger className="w-full sm:w-[180px] bg-background">
+                <SelectValue placeholder="Filtrar por Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas as Notas</SelectItem>
+                <SelectItem value="pendente">Pendente de Mapeamento</SelectItem>
+                <SelectItem value="mapeado">100% Mapeado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         ) : (
-          <div className="w-[180px] h-9 border rounded-md bg-background opacity-50" />
+          <div className="flex gap-3 w-full sm:w-auto">
+            <div className="w-full sm:w-64 h-9 border rounded-md bg-background opacity-50" />
+            <div className="w-full sm:w-[180px] h-9 border rounded-md bg-background opacity-50" />
+          </div>
         )}
       </div>
 
@@ -85,7 +120,7 @@ export function HistoricoNFeList({ historico }: { historico: any[] }) {
           return (
             <Link
               key={nfe.id}
-              href={`/nfe-importacao/${nfe.id}`}
+              href={`/nfe-importacao/${nfe.id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`}
               className="bg-surface border rounded-2xl p-5 hover:border-primary/50 transition-all active:scale-[0.98] group flex flex-col justify-between"
             >
               <div>
@@ -197,7 +232,7 @@ export function HistoricoNFeList({ historico }: { historico: any[] }) {
                     </td>
                     <td className="p-4 align-middle text-center">
                       <Button variant="ghost" size="sm" asChild className="rounded-xl hover:bg-white/10 hover:text-primary">
-                        <Link href={`/nfe-importacao/${nfe.id}`}>
+                        <Link href={`/nfe-importacao/${nfe.id}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`}>
                           Detalhes
                         </Link>
                       </Button>

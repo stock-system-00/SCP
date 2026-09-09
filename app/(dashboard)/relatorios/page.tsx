@@ -17,6 +17,7 @@ import {
   Calendar as CalendarIcon,
   Loader2,
   Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Evento, Item } from "@/lib/types";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ import { SummaryCards } from "@/components/relatorios/summary-cards";
 import { ChartsOverview } from "@/components/relatorios/charts-overview";
 import { DetailsTables } from "@/components/relatorios/details-tables";
 import { PageHeader } from "@/components/PageHeader";
+import { RelatorioMotivoModal } from "@/components/relatorios/relatorio-motivo-modal";
 
 export default function RelatoriosPage() {
   const { hasPermission } = useAuth();
@@ -49,6 +51,7 @@ export default function RelatoriosPage() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [combinedItens, setCombinedItens] = useState<any[]>([]);
+  const [isMotivoModalOpen, setIsMotivoModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -334,6 +337,15 @@ export default function RelatoriosPage() {
       >
         <div className="flex flex-col sm:flex-row gap-2">
           <Button
+            onClick={() => setIsMotivoModalOpen(true)}
+            variant="outline"
+            className="gap-2 border-primary/20 hover:bg-primary/5 w-full sm:w-auto"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Por Motivo
+          </Button>
+
+          <Button
             onClick={handleDownloadPDF}
             variant="outline"
             className="gap-2 border-primary/20 hover:bg-primary/5 w-full sm:w-auto"
@@ -397,6 +409,12 @@ export default function RelatoriosPage() {
           topMotivos={stats.topMotivosPerdas}
         />
       </main>
+
+      <RelatorioMotivoModal
+        open={isMotivoModalOpen}
+        onOpenChange={setIsMotivoModalOpen}
+        validEventos={stats.validEventos}
+      />
     </>
   );
 }

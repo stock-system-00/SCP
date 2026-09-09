@@ -11,11 +11,17 @@ import { ExcluirNFeButton } from "@/components/nfe/ExcluirNFeButton";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/PageHeader";
 
-export default async function NFeDetalhesPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NFeDetalhesPage(props: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const user = await getSession();
   if (!user || !user.ownerId) redirect("/login");
 
-  const resolvedParams = await params;
+  const resolvedParams = await props.params;
+  const resolvedSearchParams = await props.searchParams;
+  const queryString = new URLSearchParams(resolvedSearchParams as any).toString();
+  const backUrl = queryString ? `/nfe-importacao?${queryString}` : "/nfe-importacao";
   const nfe = await prisma.nFeCompra.findUnique({
     where: { id: resolvedParams.id, ownerId: user.ownerId },
     include: {
@@ -58,7 +64,7 @@ export default async function NFeDetalhesPage({ params }: { params: Promise<{ id
         <div className="flex items-start sm:items-center justify-between gap-4 mb-2 border-b pb-6">
           <div className="flex items-center gap-4">
             <Button variant="outline" size="icon" asChild className="rounded-full shrink-0">
-              <Link href="/nfe-importacao">
+              <Link href={backUrl}>
                 <ArrowLeft className="w-5 h-5" />
               </Link>
             </Button>

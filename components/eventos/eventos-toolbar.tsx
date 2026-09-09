@@ -38,6 +38,8 @@ interface EventosToolbarProps {
   setStatusFilter: (value: string) => void;
   dateRange: DateRange | undefined;
   setDateRange: (range: DateRange | undefined) => void;
+  viewMode: "pastas" | "lista-completa";
+  setViewMode: (mode: "pastas" | "lista-completa") => void;
 }
 
 export function EventosToolbar({
@@ -47,6 +49,8 @@ export function EventosToolbar({
   setStatusFilter,
   dateRange,
   setDateRange,
+  viewMode,
+  setViewMode,
 }: EventosToolbarProps) {
 
   const DateFilter = () => (
@@ -122,7 +126,7 @@ export function EventosToolbar({
 
   return (
     <div className="flex flex-col gap-4 shrink-0">
-      {}
+      { }
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -134,9 +138,9 @@ export function EventosToolbar({
         </div>
       </div>
 
-      {}
+      { }
       <div className="flex flex-col md:flex-row gap-3 items-end z-10 py-1">
-        {}
+        { }
         <div className="flex-1 w-full">
           <span className="text-xs font-medium mb-1.5 block text-muted-foreground ml-1">
             Buscar
@@ -152,7 +156,34 @@ export function EventosToolbar({
           </div>
         </div>
 
-        {}
+        { }
+        <div className="w-full md:w-auto">
+          <span className="text-xs font-medium mb-1.5 block text-muted-foreground ml-1">
+            Visualização
+          </span>
+          <div className="flex bg-muted/50 p-0.5 rounded-md border h-9 items-center w-full">
+            <Button
+              variant={viewMode === "pastas" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("pastas")}
+              className="h-7 text-xs px-3 flex-1"
+            >
+              <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+              Lotes
+            </Button>
+            <Button
+              variant={viewMode === "lista-completa" ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("lista-completa")}
+              className="h-7 text-xs px-3 flex-1"
+            >
+              <LayoutList className="h-3.5 w-3.5 mr-1.5" />
+              Itens
+            </Button>
+          </div>
+        </div>
+
+        { }
         <div className="w-full md:w-48">
           <span className="text-xs font-medium mb-1.5 block text-muted-foreground ml-1">
             Status
@@ -170,7 +201,7 @@ export function EventosToolbar({
           </Select>
         </div>
 
-        {}
+        { }
         <div className="w-full md:w-auto min-w-35">
           <span className="text-xs font-medium mb-1.5 block text-muted-foreground ml-1">
             Período
@@ -178,7 +209,7 @@ export function EventosToolbar({
           <DateFilter />
         </div>
 
-        {}
+        { }
         {(dateRange || globalSearch || statusFilter !== "todos") && (
           <Button
             variant="ghost"

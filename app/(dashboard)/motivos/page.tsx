@@ -213,24 +213,27 @@ export default function MotivosPage() {
               {filteredMotivos.map((motivo) => (
                 <div
                   key={motivo.id}
-                  className={`group flex items-center gap-2 pl-4 pr-2 py-2 rounded-full border transition-colors shadow-xs ${
-                    motivo.nome.toLowerCase() === "devolução"
-                      ? "bg-amber-100/50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-700 hover:border-amber-400"
-                      : "bg-background hover:border-primary/50"
+                  className={`group flex items-center gap-2 py-2 rounded-full border transition-colors shadow-xs ${
+                    motivo.nome.toLowerCase() === "devolução" || motivo.nome.toLowerCase() === "devolucao"
+                      ? "bg-amber-100/50 border-amber-300 dark:bg-amber-950/30 dark:border-amber-700 hover:border-amber-400 px-4 justify-center"
+                      : "bg-background hover:border-primary/50 pl-4 pr-2"
                   }`}
                 >
                   <span className={`font-medium text-sm flex items-center gap-2 ${
                     motivo.nome.toLowerCase() === "devolução" ? "text-amber-700 dark:text-amber-400" : ""
                   }`}>
-                    <Tag className={`h-3 w-3 ${
-                      motivo.nome.toLowerCase() === "devolução" ? "text-amber-600 dark:text-amber-500" : "text-muted-foreground"
-                    }`} />
+                    {motivo.nome.toLowerCase() !== "devolução" && motivo.nome.toLowerCase() !== "devolucao" && (
+                      <Tag className="h-3 w-3 text-muted-foreground" />
+                    )}
                     {motivo.nome}
                   </span>
 
                   {}
                   {(hasPermission("motivos:editar") ||
-                    hasPermission("motivos:excluir")) && motivo.id !== "fixed-devolucao" && (
+                    hasPermission("motivos:excluir")) && 
+                    motivo.nome.toLowerCase() !== "devolução" &&
+                    motivo.nome.toLowerCase() !== "devolucao" &&
+                    motivo.id !== "fixed-devolucao" && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button

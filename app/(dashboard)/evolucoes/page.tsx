@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { getDadosEvolucao } from "@/app/actions/evolucoes";
+import { useAuth } from "@/lib/auth-context";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ const chartConfigValores = {
 };
 
 export default function EvolucoesPage() {
+  const { activeLojaNome, settings } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [historico, setHistorico] = useState<any[]>([]);
   const [produtos, setProdutos] = useState<any[]>([]);
@@ -87,7 +89,7 @@ export default function EvolucoesPage() {
       produtoNome: nomeProduto,
       periodoTexto: `${dataInicio} até ${dataFim}`,
       metaPerda: META_PERDA
-    });
+    }, activeLojaNome || settings?.empresaNome || undefined);
     toast.success("Evolução exportada com sucesso!");
   };
 

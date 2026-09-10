@@ -105,6 +105,11 @@ export async function updateMotivo(id: string, nome: string) {
       };
     }
 
+    const nomeLower = motivoAntigo.nome.toLowerCase();
+    if (nomeLower === "devolução" || nomeLower === "devolucao") {
+      return { success: false, message: "O motivo 'Devolução' é fixo e não pode ser editado." };
+    }
+
     if (motivoAntigo.nome === nomeFormatado) {
       return { success: true };
     }
@@ -172,6 +177,11 @@ export async function deleteMotivo(id: string) {
         success: false,
         message: "Motivo não encontrado ou sem permissão.",
       };
+    }
+
+    const nomeLower = motivo.nome.toLowerCase();
+    if (nomeLower === "devolução" || nomeLower === "devolucao") {
+      return { success: false, message: "O motivo 'Devolução' é fixo e não pode ser excluído." };
     }
 
     await prisma.motivo.delete({

@@ -29,7 +29,7 @@ const COLORS = {
   border: [226, 232, 240] as [number, number, number],
 };
 
-const COMPANY_NAME = "Jardins Delicatessen";
+const DEFAULT_COMPANY_NAME = "Jardins Delicatessen";
 const FOOTER_TEXT = "Relatório gerado automaticamente pelo sistema.";
 
 
@@ -38,7 +38,7 @@ const formatQuantityPDF = (value: number) => {
 };
 
 
-const addModernHeader = (doc: jsPDF, title: string, subtitle?: string) => {
+const addModernHeader = (doc: jsPDF, title: string, subtitle?: string, companyName: string = DEFAULT_COMPANY_NAME) => {
   const pageWidth = doc.internal.pageSize.width;
 
   doc.setFillColor(...COLORS.primary);
@@ -47,7 +47,7 @@ const addModernHeader = (doc: jsPDF, title: string, subtitle?: string) => {
   doc.setTextColor(...COLORS.white);
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(COMPANY_NAME, 14, 15);
+  doc.text(companyName, 14, 15);
 
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
@@ -132,13 +132,14 @@ const addFooter = (doc: jsPDF, pageNum: number, totalPages: number) => {
 };
 
 
-export const generateReportPDF = (data: ReportData) => {
+export const generateReportPDF = (data: ReportData, companyName?: string) => {
   const doc = new jsPDF();
 
   addModernHeader(
     doc,
     "Relatório Gerencial de Perdas",
     `Período: ${data.periodoTexto}`,
+    companyName
   );
 
   const kpiY = 60;
@@ -251,11 +252,11 @@ export const generateReportPDF = (data: ReportData) => {
     const itensStr =
       m.topItens && m.topItens.length > 0
         ? m.topItens
-            .map(
-              (i: any) =>
-                `${i.nome} (${formatQuantityPDF(i.qtd)} ${i.unidade})`,
-            )
-            .join("\n")
+          .map(
+            (i: any) =>
+              `${i.nome} (${formatQuantityPDF(i.qtd)} ${i.unidade})`,
+          )
+          .join("\n")
         : "-";
 
     return [
@@ -305,6 +306,7 @@ export const generateReportPDF = (data: ReportData) => {
 export const generateEventPDF = (
   eventos: Evento[],
   titulo: string = "Relatório de Lote",
+  companyName?: string
 ) => {
   const doc = new jsPDF();
 
@@ -317,7 +319,7 @@ export const generateEventPDF = (
       ? `Data de Referência: ${dataReferencia}`
       : `Registro Individual`;
 
-  addModernHeader(doc, titulo, subtitulo);
+  addModernHeader(doc, titulo, subtitulo, companyName);
 
   let finalY = 60;
   let totalCustoGeral = 0;
@@ -427,13 +429,14 @@ export const generateEvolucaoPDF = (data: {
   produtoNome: string;
   periodoTexto: string;
   metaPerda: number;
-}) => {
+}, companyName?: string) => {
   const doc = new jsPDF();
 
   addModernHeader(
     doc,
     "Evolução de Perdas e Vendas",
     `Produto: ${data.produtoNome} | Período: ${data.periodoTexto}`,
+    companyName
   );
 
   let finalY = 60;
@@ -507,4 +510,83 @@ export const generateEvolucaoPDF = (data: {
   }
 
   doc.save(`evolucao_${new Date().toISOString().split("T")[0]}.pdf`);
+};
+
+export const generateMotivoPDF = (
+  dadosFiltrados: any[],
+  totais: { quantidade: number; custoTotal: number },
+  motivoNome: string,
+  companyName?: string,
+  periodoTexto?: string
+) => {
+  const doc = new jsPDF();
+
+  let subtitulo = `Motivo: ${motivoNome === "todos" ? "Todos os Motivos" : motivoNome}`;
+  if (periodoTexto) {
+    subtitulo += ` | Período: ${periodoTexto}`;
+  }
+  addModernHeader(doc, "Relatório de Itens por Motivo", subtitulo, companyName);
+
+  let finalY = 60;
+
+  const tableRows = dadosFiltrados.map((item, index) => [
+    index + 1,
+    item.codigo,
+    item.nome,
+    `${formatQuantityPDF(item.quantidade)} ${item.unidade}`,
+    formatCurrency(item.custoTotal)
+  ]);
+
+  tableRows.push([
+    "",
+    "",
+    "TOTAL GERAL",
+    formatQuantityPDF(totais.quantidade),
+    formatCurrency(totais.custoTotal)
+  ]);
+
+  autoTable(doc, {
+    startY: finalY,
+    head: [["#", "CÓDIGO", "PRODUTO", "QTD", "TOTAL (R$)"]],
+    body: tableRows,
+    theme: "plain",
+    headStyles: {
+      fillColor: COLORS.background,
+      textColor: COLORS.secondary,
+      fontStyle: "bold",
+      fontSize: 9,
+    },
+    styles: {
+      fontSize: 9,
+      cellPadding: 4,
+      lineColor: COLORS.border,
+      lineWidth: { bottom: 0.5 },
+    },
+    columnStyles: {
+      0: { cellWidth: 10, halign: "center" },
+      1: { cellWidth: 25 },
+      2: { cellWidth: "auto", fontStyle: "bold" },
+      3: { halign: "right", cellWidth: 30 },
+      4: { halign: "right", cellWidth: 35 },
+    },
+    didParseCell: (data) => {
+      if (data.section === 'body' && data.row.index === tableRows.length - 1) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = COLORS.background;
+        if (data.column.index === 4) {
+          data.cell.styles.textColor = COLORS.primary;
+        }
+      }
+    },
+    alternateRowStyles: { fillColor: COLORS.background },
+  });
+
+  const totalPages = (doc.internal as any).getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    addFooter(doc, i, totalPages);
+  }
+
+  const nomeArquivo = `relatorio-motivo-${motivoNome === "todos" ? "todos" : motivoNome.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+  doc.save(nomeArquivo);
 };

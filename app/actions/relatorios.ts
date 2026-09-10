@@ -28,6 +28,7 @@ export async function getRelatorioGeral(
           include: { categoria: true }
         },
         criadoPor: { select: { nome: true, email: true, role: true } },
+        evidencias: true,
       },
       orderBy: { dataHora: "desc" },
     });

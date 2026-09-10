@@ -41,7 +41,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { RelatorioMotivoModal } from "@/components/relatorios/relatorio-motivo-modal";
 
 export default function RelatoriosPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, activeLojaNome, settings } = useAuth();
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -170,7 +170,11 @@ export default function RelatoriosPage() {
     > = {};
 
     validEventos.forEach((ev) => {
-      const motivo = ev.motivo || "Não especificado";
+      let motivo = ev.motivo;
+      if (!motivo && ev.evidencias?.length > 0) {
+        motivo = ev.evidencias.find((e: any) => e.motivo)?.motivo || undefined;
+      }
+      motivo = motivo || "Não especificado";
       if (!motivosMap[motivo])
         motivosMap[motivo] = { qtd: 0, custo: 0, itens: {} };
 
@@ -302,7 +306,8 @@ export default function RelatoriosPage() {
         topMotivos: stats.topMotivosPerdas,
         periodoTexto,
       };
-      generateReportPDF(reportData);
+      const companyName = activeLojaNome || settings?.empresaNome || undefined;
+      generateReportPDF(reportData, companyName);
       toast.success("Relatório gerado com sucesso!");
     } catch (error) {
       toast.error("Ocorreu um erro ao gerar o relatório.");
@@ -413,7 +418,6 @@ export default function RelatoriosPage() {
       <RelatorioMotivoModal
         open={isMotivoModalOpen}
         onOpenChange={setIsMotivoModalOpen}
-        validEventos={stats.validEventos}
       />
     </>
   );

@@ -9,6 +9,7 @@ import {
   logoutAction,
   getClientSession,
   switchActiveLoja,
+  getMinhasLojas,
 } from "@/app/actions/auth";
 import { getSettings } from "@/app/actions/configuracoes";
 import { toast } from "sonner";
@@ -92,6 +93,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   switchLoja: (lojaId: string) => Promise<void>;
   hasPermission: (permission: string) => boolean;
+  activeLojaNome: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -102,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [navItems, setNavItems] = useState<NavItem[]>([]);
   const [settings, setSettings] = useState<any>(null);
+  const [activeLojaNome, setActiveLojaNome] = useState<string | null>(null);
   const router = useRouter();
 
   const loadSettings = async () => {
@@ -128,8 +131,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             avatarUrl: sessionUser.avatarUrl ?? undefined,
           };
           setUser(safeUser);
-          setActiveLojaId(sessionUser.activeLojaId ?? null);
+          const currentLojaId = sessionUser.activeLojaId ?? null;
+          setActiveLojaId(currentLojaId);
           await loadSettings();
+          const lojas = await getMinhasLojas();
+          if (currentLojaId) {
+            const active = lojas.find((l: any) => l.id === currentLojaId);
+            if (active) setActiveLojaNome(active.nome);
+          }
         }
       } catch (error) {
         console.error("Erro ao restaurar sessão:", error);
@@ -261,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         switchLoja,
         hasPermission: checkPermission,
+        activeLojaNome,
       }}
     >
       {children}

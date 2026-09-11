@@ -79,6 +79,16 @@ export async function askAssistant(userMessage: string) {
              },
              required: ["nome"]
           }
+        },
+        {
+          name: "buscarDiasDeMaiorVenda",
+          description: "Busca os dias em que a loja mais vendeu (maior faturamento), retornando a data e o valor total vendido no dia. Use quando o usuário perguntar sobre o melhor dia de vendas ou histórico de vendas.",
+          parameters: {
+             type: Type.OBJECT,
+             properties: {
+               limite: { type: Type.INTEGER, description: "Quantidade de dias a retornar (ex: 3, máximo 10)" }
+             }
+          }
         }
       ]
     }];
@@ -153,6 +163,34 @@ ${JSON.stringify(contextData)}
              functionResponse: {
                name: call.name,
                response: { resultado: itens.length > 0 ? itens : "Nenhum produto encontrado com esse nome." }
+             }
+           });
+         }
+         else if (call.name === "buscarDiasDeMaiorVenda") {
+           const args = call.args as any;
+           const limit = Math.min(Number(args?.limite) || 3, 10);
+           
+           const vendas = await prisma.vendaDiaria.findMany({
+             where: { ownerId: session.ownerId },
+             include: { itens: true }
+           });
+
+           const vendasPorDia = vendas.reduce((acc, venda) => {
+             const dataStr = venda.data.toISOString().split("T")[0];
+             const totalDia = venda.itens.reduce((sum, item) => sum + Number(item.valorLiquido), 0);
+             acc[dataStr] = (acc[dataStr] || 0) + totalDia;
+             return acc;
+           }, {} as Record<string, number>);
+
+           const diasOrdenados = Object.entries(vendasPorDia)
+             .map(([data, total]) => ({ data, totalVendido: total }))
+             .sort((a, b) => b.totalVendido - a.totalVendido)
+             .slice(0, limit);
+
+           functionResponses.push({
+             functionResponse: {
+               name: call.name,
+               response: { resultado: diasOrdenados.length > 0 ? diasOrdenados : "Nenhuma venda registrada." }
              }
            });
          }

@@ -42,8 +42,13 @@ export async function getItens() {
   if (!session) return { success: false, data: [] };
 
   try {
+    const baseWhere: any = { ownerId: session.ownerId };
+    if (session.activeLojaId) {
+      baseWhere.lojaId = session.activeLojaId;
+    }
+
     const itens = await prisma.item.findMany({
-      where: { ownerId: session.ownerId },
+      where: baseWhere,
       orderBy: { nome: "asc" },
       include: {
         categoria: true,
@@ -77,11 +82,14 @@ export async function createItem(data: CreateItemData) {
   try {
 
     if (data.codigoBarras) {
+      const baseWhere: any = {
+        codigoBarras: data.codigoBarras,
+        ownerId: session.ownerId,
+      };
+      if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
+
       const existeCodigo = await prisma.item.findFirst({
-        where: {
-          codigoBarras: data.codigoBarras,
-          ownerId: session.ownerId,
-        },
+        where: baseWhere,
       });
       if (existeCodigo) {
         return {
@@ -95,11 +103,14 @@ export async function createItem(data: CreateItemData) {
 
 
     if (finalCodigoInterno) {
+      const baseWhere: any = {
+        codigoInterno: finalCodigoInterno,
+        ownerId: session.ownerId,
+      };
+      if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
+
       const existeInterno = await prisma.item.findFirst({
-        where: {
-          codigoInterno: finalCodigoInterno,
-          ownerId: session.ownerId,
-        },
+        where: baseWhere,
       });
       if (existeInterno) {
         return {
@@ -123,6 +134,7 @@ export async function createItem(data: CreateItemData) {
         imagemUrl: data.fotoUrl || null,
         status: "ativo",
         ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }),
       },
     });
 
@@ -142,7 +154,7 @@ export async function updateItem(id: string, data: Partial<CreateItemData>) {
   try {
 
     const itemExistente = await prisma.item.findUnique({ where: { id } });
-    if (!itemExistente || itemExistente.ownerId !== session.ownerId) {
+    if (!itemExistente || itemExistente.ownerId !== session.ownerId || (session.activeLojaId && itemExistente.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Item não encontrado ou sem permissão.",
@@ -150,12 +162,15 @@ export async function updateItem(id: string, data: Partial<CreateItemData>) {
     }
 
     if (data.codigoBarras) {
+      const baseWhere: any = {
+        codigoBarras: data.codigoBarras,
+        ownerId: session.ownerId,
+        id: { not: id },
+      };
+      if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
+
       const existeOutro = await prisma.item.findFirst({
-        where: {
-          codigoBarras: data.codigoBarras,
-          ownerId: session.ownerId,
-          id: { not: id },
-        },
+        where: baseWhere,
       });
       if (existeOutro) {
         return {
@@ -195,7 +210,7 @@ export async function toggleItemStatus(id: string) {
 
   try {
     const item = await prisma.item.findUnique({ where: { id } });
-    if (!item || item.ownerId !== session.ownerId) {
+    if (!item || item.ownerId !== session.ownerId || (session.activeLojaId && item.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Item não encontrado ou sem permissão.",
@@ -223,7 +238,7 @@ export async function deleteItem(id: string) {
 
   try {
     const item = await prisma.item.findUnique({ where: { id } });
-    if (!item || item.ownerId !== session.ownerId) {
+    if (!item || item.ownerId !== session.ownerId || (session.activeLojaId && item.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Item não encontrado ou sem permissão.",
@@ -259,11 +274,14 @@ export async function importarItens(itensImportados: Item[]) {
       let categoriaId = categoriaCache.get(nomeCategoria);
 
       if (!categoriaId) {
+        const baseWhere: any = {
+          nome: { equals: nomeCategoria, mode: "insensitive" },
+          ownerId: session.ownerId,
+        };
+        if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
+
         const catExistente = await prisma.categoria.findFirst({
-          where: {
-            nome: { equals: nomeCategoria, mode: "insensitive" },
-            ownerId: session.ownerId,
-          },
+          where: baseWhere,
         });
 
         if (catExistente) {
@@ -274,6 +292,7 @@ export async function importarItens(itensImportados: Item[]) {
               nome: nomeCategoria,
               status: "ativa",
               ownerId: session.ownerId,
+              ...(session.activeLojaId && { lojaId: session.activeLojaId }),
             },
           });
           categoriaId = novaCat.id;
@@ -282,33 +301,45 @@ export async function importarItens(itensImportados: Item[]) {
       }
 
 
-      await prisma.item.upsert({
-        where: {
-          codigoInterno_ownerId: {
-
-            codigoInterno: item.codigoInterno,
-            ownerId: session.ownerId,
-          },
-        },
-        update: {
-          nome: item.nome,
-          precoVenda: item.precoVenda,
-          custo: item.custo,
-          unidade: parseUnidade(item.unidade),
-          categoriaId: categoriaId,
-        },
-        create: {
-          codigoInterno: item.codigoInterno,
-          nome: item.nome,
-          codigoBarras: item.codigoBarras || null,
-          precoVenda: item.precoVenda || 0,
-          custo: item.custo || 0,
-          unidade: parseUnidade(item.unidade),
-          categoriaId: categoriaId,
-          status: "ativo",
-          ownerId: session.ownerId,
-        },
+      const searchWhere: any = {
+        codigoInterno: item.codigoInterno,
+        ownerId: session.ownerId,
+      };
+      if (session.activeLojaId) {
+        searchWhere.lojaId = session.activeLojaId;
+      }
+      
+      const itemExistenteParaUpsert = await prisma.item.findFirst({
+        where: searchWhere,
       });
+
+      if (itemExistenteParaUpsert) {
+        await prisma.item.update({
+          where: { id: itemExistenteParaUpsert.id },
+          data: {
+            nome: item.nome,
+            precoVenda: item.precoVenda,
+            custo: item.custo,
+            unidade: parseUnidade(item.unidade),
+            categoriaId: categoriaId,
+          }
+        });
+      } else {
+        await prisma.item.create({
+          data: {
+            codigoInterno: item.codigoInterno,
+            nome: item.nome,
+            codigoBarras: item.codigoBarras || null,
+            precoVenda: item.precoVenda || 0,
+            custo: item.custo || 0,
+            unidade: parseUnidade(item.unidade),
+            categoriaId: categoriaId,
+            status: "ativo",
+            ownerId: session.ownerId,
+            ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+          }
+        });
+      }
 
       count++;
     }
@@ -330,7 +361,10 @@ export async function getItemFornecedores(itemId: string) {
     const fornecedores = await prisma.itemFornecedor.findMany({
       where: {
         itemId: itemId,
-        item: { ownerId: session.ownerId }
+        item: { 
+          ownerId: session.ownerId,
+          ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+        }
       }
     });
 
@@ -352,7 +386,7 @@ export async function deleteItemFornecedor(fornecedorId: string) {
       include: { item: true }
     });
 
-    if (!fornecedor || fornecedor.item.ownerId !== session.ownerId) {
+    if (!fornecedor || fornecedor.item.ownerId !== session.ownerId || (session.activeLojaId && fornecedor.item.lojaId !== session.activeLojaId)) {
       return { success: false, message: "Vínculo não encontrado ou sem permissão." };
     }
 
@@ -392,7 +426,7 @@ export async function createItemFornecedor(itemId: string, codigoFornecedor: str
       where: { id: itemId }
     });
 
-    if (!item || item.ownerId !== session.ownerId) {
+    if (!item || item.ownerId !== session.ownerId || (session.activeLojaId && item.lojaId !== session.activeLojaId)) {
       return { success: false, message: "Item não encontrado ou sem permissão." };
     }
 
@@ -443,11 +477,14 @@ export async function atualizarPrecosLote(itensParaAtualizar: { codigoInterno: s
     
 
     for (const item of itensParaAtualizar) {
+      const baseWhere: any = {
+        codigoInterno: item.codigoInterno,
+        ownerId: session.ownerId
+      };
+      if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
+
       const dbItem = await prisma.item.findFirst({
-        where: {
-          codigoInterno: item.codigoInterno,
-          ownerId: session.ownerId
-        },
+        where: baseWhere,
       });
 
       if (dbItem && Number(dbItem.precoVenda) !== item.precoVenda) {

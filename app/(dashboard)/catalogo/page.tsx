@@ -73,6 +73,7 @@ import {
   Trash2,
   Power,
   Loader2,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -278,6 +279,21 @@ export default function CatalogoPage() {
     }
   };
 
+  const handleDownloadTemplate = () => {
+    const headers = "codigoInterno;nome;categoria;unidade;codigoBarras;custo;precoVenda\n";
+    const example = "001;PRODUTO EXEMPLO;GERAL;UN;7890000000000;10,50;20,00\n";
+    
+    const blob = new Blob(["\uFEFF" + headers + example], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "modelo_importacao_itens.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleSaveItem = async (itemData: Partial<Item>) => {
     const catResult = await getCategorias();
     const categoriaEncontrada = catResult.data?.find(
@@ -373,6 +389,15 @@ export default function CatalogoPage() {
                 ref={fileInputRef}
                 onChange={handleFileUpload}
               />
+              <Button
+                variant="outline"
+                onClick={handleDownloadTemplate}
+                className="hidden md:inline-flex"
+                title="Baixar Modelo de Planilha CSV"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Baixar Modelo
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => fileInputRef.current?.click()}

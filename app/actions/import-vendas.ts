@@ -114,8 +114,11 @@ export async function importVendasCSV(formData: FormData) {
         vendaDiariaId = vendaDiariaIdIsolado!;
       }
 
-      const item = await prisma.item.findUnique({
-        where: { codigoInterno_ownerId: { codigoInterno: codItem, ownerId } }
+      const baseWhereItem: any = { codigoInterno: codItem, ownerId };
+      if (user.activeLojaId) baseWhereItem.lojaId = user.activeLojaId;
+
+      const item = await prisma.item.findFirst({
+        where: baseWhereItem
       });
       
       if (!item) continue;

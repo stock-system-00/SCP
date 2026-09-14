@@ -50,7 +50,7 @@ export function BottomNav() {
     { icon: Grid, label: "Categorias", href: "/categorias", permission: "categorias:ver" },
     { icon: AlertCircle, label: "Motivos", href: "/motivos", permission: "motivos:ver" },
     { icon: BarChart2, label: "Vendas", href: "/vendas", permission: "vendas:ver" },
-    { icon: Receipt, label: "NFe (Custos)", href: "/nfe-importacao", permission: "notas:importar" },
+    { icon: Receipt, label: "NFe", href: "/nfe-importacao", permission: "notas:importar" },
   ].filter(item => hasPermission(item.permission));
 
   const systemOptions = [
@@ -83,7 +83,7 @@ export function BottomNav() {
             );
           })}
 
-          {}
+          { }
           {hasPermission("eventos:criar") && (
             <div className="relative -top-5 flex justify-center w-full">
               <Link
@@ -115,7 +115,7 @@ export function BottomNav() {
             );
           })}
 
-          {}
+          { }
           {(moreMenuOptions.length > 0 || systemOptions.length > 0) && (
             <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
               <SheetTrigger asChild>
@@ -129,12 +129,12 @@ export function BottomNav() {
                   <span className="text-[10px] font-medium">Mais</span>
                 </button>
               </SheetTrigger>
-              
+
               <SheetContent side="bottom" className="rounded-t-2xl px-2 pb-6 max-h-[85vh]">
                 <SheetHeader className="px-4 text-left border-b pb-4 mb-4">
                   <SheetTitle>Mais Opções</SheetTitle>
                 </SheetHeader>
-                
+
                 <div className="grid grid-cols-4 gap-4 px-2">
                   {moreMenuOptions.map((item) => {
                     const isActive = pathname === item.href;

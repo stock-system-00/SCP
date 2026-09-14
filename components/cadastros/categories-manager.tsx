@@ -170,7 +170,7 @@ export function CategoriesManager() {
 
   return (
     <div className="space-y-4">
-      {}
+      { }
       <div className="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
         <div className="relative w-full sm:w-72">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -189,8 +189,8 @@ export function CategoriesManager() {
         )}
       </div>
 
-      {}
-      <div className="rounded-md border bg-card overflow-hidden">
+      { }
+      <div className="rounded-md overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
@@ -276,7 +276,7 @@ export function CategoriesManager() {
         </Table>
       </div>
 
-      {}
+      { }
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-100">
           <DialogHeader>
@@ -326,7 +326,7 @@ export function CategoriesManager() {
         </DialogContent>
       </Dialog>
 
-      {}
+      { }
       <AlertDialog
         open={!!categoryToDelete}
         onOpenChange={(open) => !open && setCategoryToDelete(null)}

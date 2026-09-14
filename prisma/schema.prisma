@@ -92,6 +92,8 @@ model Loja {
 
   users        User[]        @relation("UserLoja")
   usersPermitidos User[]     @relation("UserLojasPermitidas")
+  categorias   Categoria[]
+  itens        Item[]
   eventos      Evento[]
   vendas       VendaDiaria[]
   nfeCompras   NFeCompra[]
@@ -113,9 +115,12 @@ model Categoria {
   ownerId   String
   owner     User     @relation("CategoriaDono", fields: [ownerId], references: [id])
 
+  lojaId    String?
+  loja      Loja?    @relation(fields: [lojaId], references: [id])
+
   items Item[]
 
-  @@unique([nome, ownerId])
+  @@unique([nome, ownerId, lojaId])
   @@map("categorias")
 }
 
@@ -140,12 +145,15 @@ model Item {
   ownerId     String
   owner       User   @relation("ItemDono", fields: [ownerId], references: [id])
 
+  lojaId      String?
+  loja        Loja?  @relation(fields: [lojaId], references: [id])
+
   eventos    Evento[]
   vendaItens VendaItem[]
   fornecedores ItemFornecedor[]
   nfeCompraItens NFeCompraItem[]
 
-  @@unique([codigoInterno, ownerId])
+  @@unique([codigoInterno, ownerId, lojaId])
   @@map("items")
 }
 

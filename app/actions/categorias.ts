@@ -11,8 +11,13 @@ export async function getCategorias() {
   if (!session) return { success: false, data: [] };
 
   try {
+    const baseWhere: any = { ownerId: session.ownerId };
+    if (session.activeLojaId) {
+      baseWhere.lojaId = session.activeLojaId;
+    }
+
     const categorias = await prisma.categoria.findMany({
-      where: { ownerId: session.ownerId },
+      where: baseWhere,
       orderBy: { nome: "asc" },
     });
     return { success: true, data: categorias };
@@ -32,11 +37,16 @@ export async function createCategoria(nome: string) {
   try {
 
 
+    const baseWhere: any = { 
+      nome: { equals: nome, mode: "insensitive" },
+      ownerId: session.ownerId 
+    };
+    if (session.activeLojaId) {
+      baseWhere.lojaId = session.activeLojaId;
+    }
+
     const existe = await prisma.categoria.findFirst({
-      where: {
-        nome: { equals: nome, mode: "insensitive" },
-        ownerId: session.ownerId,
-      },
+      where: baseWhere,
     });
 
     if (existe) {
@@ -52,6 +62,7 @@ export async function createCategoria(nome: string) {
         nome,
         status: "ativa",
         ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }),
       },
     });
 
@@ -71,7 +82,7 @@ export async function updateCategoria(id: string, nome: string) {
   try {
 
     const categoria = await prisma.categoria.findUnique({ where: { id } });
-    if (!categoria || categoria.ownerId !== session.ownerId) {
+    if (!categoria || categoria.ownerId !== session.ownerId || (session.activeLojaId && categoria.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Categoria não encontrada ou sem permissão.",
@@ -98,7 +109,7 @@ export async function deleteCategoria(id: string) {
   try {
 
     const categoria = await prisma.categoria.findUnique({ where: { id } });
-    if (!categoria || categoria.ownerId !== session.ownerId) {
+    if (!categoria || categoria.ownerId !== session.ownerId || (session.activeLojaId && categoria.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Categoria não encontrada ou sem permissão.",

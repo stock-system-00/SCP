@@ -54,7 +54,7 @@ export function EventosTable({
   }
 
   return (
-    <div className="rounded-md border bg-card overflow-hidden">
+    <div className="rounded-md overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="bg-card hover:bg-card border-0 text-[11px] uppercase tracking-wider">
@@ -139,8 +139,8 @@ export function EventosTable({
                       variant="ghost"
                       size="icon"
                       className={`h-8 w-8 ${isLocked
-                          ? "opacity-50 cursor-not-allowed text-muted-foreground"
-                          : "text-destructive hover:text-destructive hover:bg-destructive/10"
+                        ? "opacity-50 cursor-not-allowed text-muted-foreground"
+                        : "text-destructive hover:text-destructive hover:bg-destructive/10"
                         }`}
                       disabled={isLocked}
                       onClick={() => !isLocked && onDelete(evento.id)}

@@ -67,7 +67,10 @@ export async function getEvidencias() {
 
   try {
     const evidencias = await prisma.evidencia.findMany({
-      where: { ownerId: session.ownerId }, // NOVO: Filtro de isolamento
+      where: { 
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }) 
+      }, // NOVO: Filtro de isolamento
       orderBy: { dataUpload: "desc" },
       include: {
         evento: {
@@ -128,6 +131,7 @@ export async function createEvidenciaAvulsa(data: {
         dataUpload: dataFinal,
         userId: session.id,
         ownerId: session.ownerId,
+        lojaId: session.activeLojaId || null,
         eventoId: data.eventoId || null,
       },
     });
@@ -148,7 +152,7 @@ export async function deleteEvidencia(id: string) {
   try {
 
     const evidencia = await prisma.evidencia.findUnique({ where: { id } });
-    if (!evidencia || evidencia.ownerId !== session.ownerId) {
+    if (!evidencia || evidencia.ownerId !== session.ownerId || (session.activeLojaId && evidencia.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Foto não encontrada ou sem permissão.",
@@ -170,7 +174,10 @@ export async function buscarEventosParaVinculo() {
 
   try {
     const eventos = await prisma.evento.findMany({
-      where: { ownerId: session.ownerId },
+      where: { 
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }) 
+      },
       take: 50,
       orderBy: { dataHora: "desc" },
       include: {
@@ -208,7 +215,7 @@ export async function updateEvidencia(
   try {
 
     const evidencia = await prisma.evidencia.findUnique({ where: { id } });
-    if (!evidencia || evidencia.ownerId !== session.ownerId) {
+    if (!evidencia || evidencia.ownerId !== session.ownerId || (session.activeLojaId && evidencia.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Foto não encontrada ou sem permissão.",

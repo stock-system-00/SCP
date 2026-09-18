@@ -52,11 +52,19 @@ export async function importVendasCSV(formData: FormData) {
       dateObjIsolado = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
       
       let vendaDiaria = await prisma.vendaDiaria.findFirst({
-        where: { data: dateObjIsolado, ownerId }
+        where: { 
+          data: dateObjIsolado, 
+          ownerId,
+          ...(user.activeLojaId && { lojaId: user.activeLojaId })
+        }
       });
       if (!vendaDiaria) {
         vendaDiaria = await prisma.vendaDiaria.create({
-          data: { data: dateObjIsolado, ownerId }
+          data: { 
+            data: dateObjIsolado, 
+            ownerId, 
+            lojaId: user.activeLojaId || null 
+          }
         });
       }
       vendaDiariaIdIsolado = vendaDiaria.id;
@@ -94,11 +102,19 @@ export async function importVendasCSV(formData: FormData) {
         if (!vendaDiariaId) {
           const dateObj = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
           let vendaDiaria = await prisma.vendaDiaria.findFirst({
-            where: { data: dateObj, ownerId }
+            where: { 
+              data: dateObj, 
+              ownerId,
+              ...(user.activeLojaId && { lojaId: user.activeLojaId })
+            }
           });
           if (!vendaDiaria) {
             vendaDiaria = await prisma.vendaDiaria.create({
-              data: { data: dateObj, ownerId }
+              data: { 
+                data: dateObj, 
+                ownerId, 
+                lojaId: user.activeLojaId || null 
+              }
             });
           }
           vendaDiariaId = vendaDiaria.id;
@@ -154,8 +170,13 @@ export async function deleteVenda(id: string) {
   const ownerId = session.ownerId || session.id;
 
   try {
+    const venda = await prisma.vendaDiaria.findUnique({ where: { id } });
+    if (!venda || venda.ownerId !== ownerId || (session.activeLojaId && venda.lojaId !== session.activeLojaId)) {
+      return { success: false, error: "Venda não encontrada ou sem permissão." };
+    }
+
     await prisma.vendaDiaria.delete({
-      where: { id, ownerId }
+      where: { id }
     });
 
     revalidatePath("/vendas");

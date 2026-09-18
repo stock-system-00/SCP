@@ -145,7 +145,7 @@ export function TopVendasList() {
   const ranking = data || [];
 
   const TriggerButton = (
-    <Button variant="outline" size="sm" className="gap-2 text-amber-600 dark:text-amber-500 border-amber-200 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-medium">
+    <Button suppressHydrationWarning variant="outline" size="sm" className="gap-2 text-amber-600 dark:text-amber-500 border-amber-200 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 font-medium">
       <Trophy className="h-4 w-4" />
       <span className="hidden sm:inline">Mais Vendidos</span>
       <span className="sm:hidden">Top</span>

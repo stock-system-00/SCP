@@ -16,7 +16,10 @@ export async function getNotas() {
 
   try {
     const notas = await prisma.notaFiscal.findMany({
-      where: { ownerId: session.ownerId },
+      where: { 
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId })
+      },
       orderBy: { dataUpload: "desc" },
       include: {
         uploadedBy: {
@@ -49,6 +52,7 @@ export async function createNota(data: any) {
         where: {
           chaveAcesso: data.chaveAcesso,
           ownerId: session.ownerId,
+          ...(session.activeLojaId && { lojaId: session.activeLojaId })
         },
       });
       if (existe) {
@@ -64,6 +68,7 @@ export async function createNota(data: any) {
       data: {
         uploadedById: session.id,
         ownerId: session.ownerId,
+        lojaId: session.activeLojaId || null,
         dataUpload: new Date(),
         numero: data.numero,
         serie: data.serie,
@@ -99,10 +104,10 @@ export async function deleteNota(id: string) {
 
     const nota = await prisma.notaFiscal.findUnique({
       where: { id },
-      select: { pdfUrl: true, xmlUrl: true, ownerId: true },
+      select: { pdfUrl: true, xmlUrl: true, ownerId: true, lojaId: true },
     });
 
-    if (!nota || nota.ownerId !== session.ownerId) {
+    if (!nota || nota.ownerId !== session.ownerId || (session.activeLojaId && nota.lojaId !== session.activeLojaId)) {
       return {
         success: false,
         message: "Nota não encontrada ou sem permissão para excluir.",

@@ -110,7 +110,8 @@ export async function importNFeXML(formData: FormData) {
         where: {
           numero,
           emitente: emitente || undefined,
-          ownerId: user.ownerId
+          ownerId: user.ownerId,
+          ...(user.activeLojaId && { lojaId: user.activeLojaId })
         }
       });
 
@@ -188,6 +189,7 @@ export async function importNFeXML(formData: FormData) {
         valorTotal,
         xmlContent: xmlText,
         ownerId: user.ownerId,
+        lojaId: user.activeLojaId || null,
         itens: {
           create: mappedItemsToSave
         }
@@ -316,7 +318,7 @@ export async function deleteNFeImport(id: string) {
       include: { itens: true }
     });
 
-    if (!nfe) return { success: false, error: "NFe não encontrada." };
+    if (!nfe || (user.activeLojaId && nfe.lojaId !== user.activeLojaId)) return { success: false, error: "NFe não encontrada ou sem permissão." };
 
     const mappedItemIds = new Set<string>();
     nfe.itens.forEach(item => {

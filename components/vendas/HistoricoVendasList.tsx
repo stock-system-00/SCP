@@ -28,10 +28,15 @@ interface VendaResumo {
 }
 
 export function HistoricoVendasList({ vendas }: { vendas: VendaResumo[] }) {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const itemsPerPage = 10;
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Filtro
   const filteredVendas = vendas.filter(v => {
@@ -69,6 +74,10 @@ export function HistoricoVendasList({ vendas }: { vendas: VendaResumo[] }) {
       setVendaToDelete(null);
     }
   };
+
+  if (!isMounted) {
+    return <div className="h-[200px] bg-surface rounded-2xl border animate-pulse" />;
+  }
 
   return (
     <div className="bg-surface border rounded-2xl shadow-sm overflow-hidden flex flex-col">

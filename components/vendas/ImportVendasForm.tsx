@@ -19,6 +19,7 @@ const COLUNAS_ISOLADO = [0, 2, 3, 4, 7];
 type ImportMode = "lote" | "isolado";
 
 export function ImportVendasForm() {
+  const [isMounted, setIsMounted] = React.useState(false);
   const [mode, setMode] = useState<ImportMode>("lote");
   const [date, setDate] = useState<Date>();
   const [file, setFile] = useState<File | null>(null);
@@ -28,6 +29,10 @@ export function ImportVendasForm() {
   const [dailySummary, setDailySummary] = useState<{ date: string; count: number; total: number }[]>([]);
 
   const [isUploading, setIsUploading] = useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const parseBrazilianDecimal = (val: string) => {
     if (!val) return 0;
@@ -153,6 +158,10 @@ export function ImportVendasForm() {
 
   const getColumnLetter = (index: number) => String.fromCharCode(65 + index);
   const activeColumns = mode === "lote" ? COLUNAS_LOTE : COLUNAS_ISOLADO;
+
+  if (!isMounted) {
+    return <div className="h-[200px] bg-surface rounded-2xl border animate-pulse" />;
+  }
 
   return (
     <div className="space-y-6">

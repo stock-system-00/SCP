@@ -364,7 +364,10 @@ export async function getTopVendasGerais() {
     const topVendasGeraisRaw = await prisma.vendaItem.groupBy({
       by: ['itemId'],
       where: {
-        vendaDiaria: { ownerId: session.ownerId }
+        vendaDiaria: { 
+          ownerId: session.ownerId,
+          ...(session.activeLojaId && { lojaId: session.activeLojaId })
+        }
       },
       _sum: {
         quantidade: true,

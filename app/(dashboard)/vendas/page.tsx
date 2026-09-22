@@ -13,7 +13,10 @@ export default async function VendasPage() {
 
   // Busca as vendas diárias e o resumo (total de itens e valor total)
   const vendasDiarias = await prisma.vendaDiaria.findMany({
-    where: { ownerId },
+    where: { 
+      ownerId,
+      ...(session?.activeLojaId && { lojaId: session.activeLojaId })
+    },
     include: {
       itens: {
         select: {

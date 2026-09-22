@@ -23,7 +23,8 @@ export default async function VendaDetalhePage({ params }: { params: Promise<{ i
   const venda = await prisma.vendaDiaria.findUnique({
     where: {
       id: vendaId,
-      ownerId
+      ownerId,
+      ...(session?.activeLojaId && { lojaId: session.activeLojaId })
     },
     include: {
       itens: {

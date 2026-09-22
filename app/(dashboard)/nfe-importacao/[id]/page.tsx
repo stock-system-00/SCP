@@ -17,6 +17,9 @@ export default async function NFeDetalhesPage(props: {
 }) {
   const user = await getSession();
   if (!user || !user.ownerId) redirect("/login");
+  if (user.activeLojaId === "66cb52b6-0ccb-4c97-9ab0-ed1515df1356") {
+    redirect("/dashboard");
+  }
 
   const resolvedParams = await props.params;
   const resolvedSearchParams = await props.searchParams;

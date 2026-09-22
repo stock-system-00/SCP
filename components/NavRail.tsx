@@ -27,7 +27,7 @@ import { StoreSwitcher } from "./StoreSwitcher";
 export function NavRail() {
   const pathname = usePathname();
   const { navAberto: aberto } = useSidebar();
-  const { hasPermission, settings, user, logout } = useAuth();
+  const { hasPermission, settings, user, logout, activeLojaId } = useAuth();
 
   const navGroups = [
     {
@@ -78,6 +78,9 @@ export function NavRail() {
         {navGroups.map((group, groupIdx) => {
 
           const filteredItems = group.items.filter((item) => {
+            if (item.href === "/nfe-importacao" && activeLojaId === "66cb52b6-0ccb-4c97-9ab0-ed1515df1356") {
+              return false;
+            }
             if (item.href === "/galeria" && user?.role === "funcionario") {
               return hasPermission(item.permission) && settings?.permitirFuncionarioGaleria === true;
             }

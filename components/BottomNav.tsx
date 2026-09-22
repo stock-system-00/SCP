@@ -27,7 +27,7 @@ import { useAuth } from "@/lib/auth-context";
 export function BottomNav() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { hasPermission, settings, user, logout } = useAuth();
+  const { hasPermission, settings, user, logout, activeLojaId } = useAuth();
 
   const mainNavItems = [
     { icon: LayoutDashboard, label: "Início", href: "/dashboard", permission: "dashboard:ver" },
@@ -51,7 +51,12 @@ export function BottomNav() {
     { icon: AlertCircle, label: "Motivos", href: "/motivos", permission: "motivos:ver" },
     { icon: BarChart2, label: "Vendas", href: "/vendas", permission: "vendas:ver" },
     { icon: Receipt, label: "NFe", href: "/nfe-importacao", permission: "notas:importar" },
-  ].filter(item => hasPermission(item.permission));
+  ].filter(item => {
+    if (item.href === "/nfe-importacao" && activeLojaId === "66cb52b6-0ccb-4c97-9ab0-ed1515df1356") {
+      return false;
+    }
+    return hasPermission(item.permission);
+  });
 
   const systemOptions = [
     { icon: User, label: "Perfil", href: "/perfil", permission: "perfil:ver" },

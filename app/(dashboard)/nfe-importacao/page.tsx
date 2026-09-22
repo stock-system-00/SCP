@@ -28,6 +28,10 @@ export default async function NFeImportacaoPage(props: {
     redirect("/login");
   }
 
+  if (user.activeLojaId === "66cb52b6-0ccb-4c97-9ab0-ed1515df1356") {
+    redirect("/dashboard");
+  }
+
   const page = Number(searchParams?.page) || 1;
   const pageSize = 10;
   const skip = (page - 1) * pageSize;

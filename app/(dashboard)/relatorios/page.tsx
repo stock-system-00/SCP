@@ -302,7 +302,11 @@ export default function RelatoriosPage() {
               maximumFractionDigits: 1,
             }) + "%",
         },
-        topItens: stats.topItens,
+        todosItens: [...combinedItens].sort((a, b) => {
+          const nomeA = a.item?.nome || "";
+          const nomeB = b.item?.nome || "";
+          return nomeA.localeCompare(nomeB);
+        }),
         topMotivos: stats.topMotivosPerdas,
         periodoTexto,
       };

@@ -12,7 +12,7 @@ interface ReportData {
     totalQtd: number;
     margemPerda: string;
   };
-  topItens: any[];
+  todosItens: any[];
   topMotivos: any[];
   periodoTexto: string;
 }
@@ -186,9 +186,9 @@ export const generateReportPDF = (data: ReportData, companyName?: string) => {
   doc.setFontSize(11);
   doc.setTextColor(...COLORS.black);
   doc.setFont("helvetica", "bold");
-  doc.text("Top 10 Itens Críticos", 14, finalY);
+  doc.text("Todos os Itens Registrados", 14, finalY);
 
-  const itensData = data.topItens.map((item: any, index: number) => [
+  const itensData = data.todosItens.map((item: any, index: number) => [
     index + 1,
     item.item.codigoInterno || "-",
     item.item.nome,
@@ -199,7 +199,7 @@ export const generateReportPDF = (data: ReportData, companyName?: string) => {
 
   autoTable(doc, {
     startY: finalY + 4,
-    head: [["RANK", "CÓD.", "PRODUTO", "QTD.", "CUSTO", "TAXA PERDA"]],
+    head: [["#", "CÓD.", "PRODUTO", "QTD.", "CUSTO", "TAXA PERDA"]],
     body: itensData,
     theme: "plain",
     headStyles: {
@@ -226,11 +226,6 @@ export const generateReportPDF = (data: ReportData, companyName?: string) => {
         textColor: COLORS.danger,
         fontStyle: "bold",
       },
-    },
-    didParseCell: (data) => {
-      if (data.row.index === 0 && data.section === "body") {
-        data.cell.styles.fillColor = [254, 242, 242];
-      }
     },
   });
 

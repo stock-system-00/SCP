@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { startOfMonth, subMonths, endOfMonth, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export async function getDadosEvolucao(
   dataInicioStr: string,
@@ -22,12 +23,14 @@ export async function getDadosEvolucao(
 
     const whereEvento: any = {
       ownerId: session.ownerId,
+      ...(session.activeLojaId && { lojaId: session.activeLojaId }),
       dataHora: { gte: minDate, lte: maxDate },
       status: { notIn: ["rascunho", "rejeitado"] },
     };
 
     const whereVenda: any = {
       ownerId: session.ownerId,
+      ...(session.activeLojaId && { lojaId: session.activeLojaId }),
       data: { gte: minDate, lte: maxDate },
     };
 
@@ -69,7 +72,7 @@ export async function getDadosEvolucao(
     let currentD = new Date(minDate);
     while (currentD <= maxDate) {
       const key = format(currentD, "yyyy-MM");
-      const label = format(currentD, "MMM/yyyy").toUpperCase();
+      const label = format(currentD, "MMM/yyyy", { locale: ptBR }).replace(".", "").toUpperCase();
       monthsMap[key] = { label, mesIso: key, custoPerda: 0, faturamento: 0, taxaPerda: 0, statusAumento: "N/A" };
       currentD.setMonth(currentD.getMonth() + 1);
     }

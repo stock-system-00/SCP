@@ -180,7 +180,7 @@ export function UserFormDialog({
               <Label className="text-base mb-1">Filiais Permitidas</Label>
               <p className="text-xs text-muted-foreground mb-3">
                 Selecione as filiais que este usuário poderá acessar. 
-                Se não selecionar nenhuma, ele terá acesso a todas as lojas da rede por padrão.
+                Se não selecionar nenhuma, ele <b>NÃO</b> terá acesso a nenhuma loja por padrão.
               </p>
               <div className="flex flex-col gap-2 max-h-[150px] overflow-y-auto pr-2">
                 {lojas.map((loja) => (

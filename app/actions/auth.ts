@@ -47,9 +47,8 @@ export async function loginAction(email: string, password?: string) {
         if (userWithLojas && userWithLojas.lojasPermitidas.length > 0) {
           initialActiveLojaId = userWithLojas.lojasPermitidas[0].id;
         } else {
-          // Se lista vazia, tem acesso a todas (conforme regra)
-          const firstLoja = await prisma.loja.findFirst({ where: { ownerId: tenantId } });
-          if (firstLoja) initialActiveLojaId = firstLoja.id;
+          // Se lista vazia, NÃO damos acesso a nenhuma loja para evitar vazamento
+          initialActiveLojaId = null;
         }
       }
     }
@@ -124,13 +123,9 @@ export async function getMinhasLojas() {
 
   if (!user) return [];
 
-  // Se o funcionário/gestor não tem nenhuma loja vinculada, damos acesso a todas (como o dono definiu)
+  // Se o funcionário/gestor não tem nenhuma loja vinculada, não damos acesso a nenhuma para evitar vazamento de dados
   if (user.lojasPermitidas.length === 0) {
-    return await prisma.loja.findMany({
-      where: { ownerId: session.ownerId },
-      select: { id: true, nome: true, cnpj: true },
-      orderBy: { nome: 'asc' }
-    });
+    return [];
   }
 
   return user.lojasPermitidas;

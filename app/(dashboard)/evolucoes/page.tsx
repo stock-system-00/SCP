@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState, useEffect, useMemo } from "react";
 import { getDadosEvolucao } from "@/app/actions/evolucoes";
 import { useAuth } from "@/lib/auth-context";
@@ -41,12 +42,12 @@ export default function EvolucoesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [historico, setHistorico] = useState<any[]>([]);
   const [produtos, setProdutos] = useState<any[]>([]);
-  
+
 
   const hoje = new Date();
   const mesAnterior = new Date();
   mesAnterior.setMonth(hoje.getMonth() - 1);
-  
+
   const formataInputMonth = (d: Date) => {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   };
@@ -56,7 +57,7 @@ export default function EvolucoesPage() {
 
   const [produtoId, setProdutoId] = useState<string>("todos");
   const [comboOpen, setComboOpen] = useState(false);
-  
+
 
   const META_PERDA = 2;
 
@@ -64,7 +65,7 @@ export default function EvolucoesPage() {
     async function carregarDados() {
       setIsLoading(true);
       const res = await getDadosEvolucao(
-        dataInicio, 
+        dataInicio,
         dataFim,
         produtoId === "todos" ? undefined : produtoId
       );
@@ -80,10 +81,10 @@ export default function EvolucoesPage() {
   }, [dataInicio, dataFim, produtoId]);
 
   const handleDownloadPDF = () => {
-    const nomeProduto = produtoId === "todos" 
-      ? "Todos os Produtos" 
+    const nomeProduto = produtoId === "todos"
+      ? "Todos os Produtos"
       : produtos.find(p => p.id === produtoId)?.nome || "Produto Específico";
-      
+
     generateEvolucaoPDF({
       historico,
       produtoNome: nomeProduto,
@@ -93,18 +94,18 @@ export default function EvolucoesPage() {
     toast.success("Evolução exportada com sucesso!");
   };
 
-  const selectedProdNome = produtoId === "todos" 
-    ? "Visão Geral (Todos os Produtos)" 
+  const selectedProdNome = produtoId === "todos"
+    ? "Visão Geral (Todos os Produtos)"
     : produtos.find(p => p.id === produtoId)?.nome || "Selecionar produto...";
 
   return (
     <>
-      <PageHeader 
-        title="Evolução de Perdas" 
+      <PageHeader
+        title="Evolução de Perdas"
         description="Acompanhe o histórico e a variação das taxas de perda ao longo do tempo"
       >
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           className="gap-2 border-primary/20 hover:bg-primary/5"
           onClick={handleDownloadPDF}
           disabled={isLoading || historico.length === 0}
@@ -115,7 +116,7 @@ export default function EvolucoesPage() {
       </PageHeader>
 
       <main className="flex-1 space-y-6 px-4 py-5 md:px-8 md:py-6 overflow-y-auto">
-        {}
+        { }
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="flex-1 max-w-sm">
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
@@ -168,7 +169,7 @@ export default function EvolucoesPage() {
               </PopoverContent>
             </Popover>
           </div>
-          
+
           <div className="flex gap-2 w-full sm:w-auto">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">
@@ -195,7 +196,7 @@ export default function EvolucoesPage() {
           </div>
         </div>
 
-        {}
+        { }
         {isLoading ? (
           <div className="flex flex-col items-center justify-center min-h-[40vh] gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -208,8 +209,8 @@ export default function EvolucoesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {}
+
+            { }
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Taxa de Perda Histórica (%)</CardTitle>
@@ -222,14 +223,14 @@ export default function EvolucoesPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={historico} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                      <XAxis 
-                        dataKey="label" 
-                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} 
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                         tickLine={false}
                         axisLine={false}
                         dy={10}
                       />
-                      <YAxis 
+                      <YAxis
                         tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                         tickLine={false}
                         axisLine={false}
@@ -237,17 +238,17 @@ export default function EvolucoesPage() {
                       />
                       <ChartTooltip content={<ChartTooltipContent formatter={(val: any) => `${Number(val).toFixed(2)}%`} className="bg-slate-900 border-slate-800 text-slate-100 shadow-xl" />} />
                       <ChartLegend content={<ChartLegendContent />} />
-                      
+
                       <ReferenceLine y={META_PERDA} stroke="hsl(var(--success))" strokeDasharray="3 3" label={{ position: 'top', value: `Meta (${META_PERDA}%)`, fill: 'hsl(var(--success))', fontSize: 11 }} />
-                      
-                      <Line 
-                        type="monotone" 
-                        dataKey="taxaPerda" 
-                        name="Taxa de Perda (%)" 
-                        stroke="var(--chart-1)" 
+
+                      <Line
+                        type="monotone"
+                        dataKey="taxaPerda"
+                        name="Taxa de Perda (%)"
+                        stroke="var(--chart-1)"
                         strokeWidth={3}
                         dot={{ r: 4, strokeWidth: 2, fill: "var(--background)", stroke: "var(--chart-1)" }}
-                        activeDot={{ r: 6 }} 
+                        activeDot={{ r: 6 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -255,7 +256,7 @@ export default function EvolucoesPage() {
               </CardContent>
             </Card>
 
-            {}
+            { }
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Faturamento vs Perda (R$)</CardTitle>
@@ -268,25 +269,25 @@ export default function EvolucoesPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={historico} margin={{ top: 10, right: 30, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
-                      <XAxis 
-                        dataKey="label" 
-                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} 
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                         tickLine={false}
                         axisLine={false}
                         dy={10}
                       />
-                      <YAxis 
+                      <YAxis
                         tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                         tickLine={false}
                         axisLine={false}
                         tickFormatter={(val) => {
-                          if (val >= 1000) return `R$${(val/1000).toFixed(1)}k`;
+                          if (val >= 1000) return `R$${(val / 1000).toFixed(1)}k`;
                           return `R$${val}`;
                         }}
                       />
                       <ChartTooltip content={<ChartTooltipContent formatter={(val: any) => formatCurrency(Number(val))} className="bg-slate-900 border-slate-800 text-slate-100 shadow-xl" />} />
                       <ChartLegend content={<ChartLegendContent />} />
-                      
+
                       <Bar dataKey="faturamento" name="Faturamento (R$)" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                       <Bar dataKey="custoPerda" name="Custo Perda (R$)" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -295,7 +296,7 @@ export default function EvolucoesPage() {
               </CardContent>
             </Card>
 
-            {}
+            { }
             <Card className="shadow-sm lg:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Detalhamento Financeiro</CardTitle>

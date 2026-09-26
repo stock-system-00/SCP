@@ -81,19 +81,21 @@ export async function getRelatorioGeral(
     }
 
 
-    const combinedItens = Object.values(itemMap).map((stat) => {
-      let taxaPerda = 0;
-      if (stat.faturamento > 0) {
-        taxaPerda = (stat.custoPerda / stat.faturamento) * 100;
-      } else if (stat.custoPerda > 0) {
-        taxaPerda = 100;
-      }
+    const combinedItens = Object.values(itemMap)
+      .filter((stat) => stat.qtdPerda > 0)
+      .map((stat) => {
+        let taxaPerda = 0;
+        if (stat.faturamento > 0) {
+          taxaPerda = (stat.custoPerda / stat.faturamento) * 100;
+        } else if (stat.custoPerda > 0) {
+          taxaPerda = 100;
+        }
 
-      return {
-        ...stat,
-        taxaPerda,
-      };
-    });
+        return {
+          ...stat,
+          taxaPerda,
+        };
+      });
 
     return {
       success: true,

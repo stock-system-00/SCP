@@ -139,11 +139,13 @@ export async function createEvento(data: CreateEventoData) {
       }
     }
 
+    const isAutoApproveLoja = session.activeLojaId === "66cb52b6-0ccb-4c97-9ab0-ed1515df1356";
+
     await prisma.evento.create({
       data: {
         dataHora: data.dataPersonalizada || new Date(),
         motivo: data.motivo,
-        status: "rascunho",
+        status: isAutoApproveLoja ? "aprovado" : "rascunho",
         quantidade: data.quantidade,
         unidade: item.unidade,
         custoSnapshot: item.custo,
@@ -152,6 +154,7 @@ export async function createEvento(data: CreateEventoData) {
         criadoPor: { connect: { id: session.id } },
         owner: { connect: { id: session.ownerId } },
         ...(session.activeLojaId && { loja: { connect: { id: session.activeLojaId } } }),
+        ...(isAutoApproveLoja && { aprovadoPor: { connect: { id: session.id } } }),
         evidencias: {
           create: uploadedUrls.map((url) => ({
             url,

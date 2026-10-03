@@ -157,9 +157,9 @@ export default function Dashboard() {
     }
   }, [hasPermission, isLoading, router]);
 
-  const [modo, setModo] = useState<Modo>("semana");
-  const [pa, setPa] = useState("2026-W33");
-  const [pb, setPb] = useState("2026-W32");
+  const [modo, setModo] = useState<Modo>("mes");
+  const [pa, setPa] = useState("2026-08");
+  const [pb, setPb] = useState("2026-07");
 
   useEffect(() => {
     const saved = localStorage.getItem("dashboard_modo") as Modo | null;

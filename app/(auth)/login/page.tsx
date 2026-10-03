@@ -84,15 +84,8 @@ export default function LoginPage() {
               )}
               Entrar no sistema
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Precisa de ajuda?{" "}
-              <button
-                type="button"
-                className="font-medium hover:underline underline-offset-4"
-              >
-                Fale com o suporte
-              </button>
-            </p>
+
+
           </CardFooter>
         </form>
       </Card>

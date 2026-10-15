@@ -259,47 +259,27 @@ export async function deleteItem(id: string) {
 }
 
 
-export async function importarItens(itensImportados: Item[]) {
+export async function importarItens(
+  itensImportados: Array<{
+    codigoInterno: string;
+    nome?: string;
+    categoria?: string;
+    unidade?: "UN" | "KG" | "CX" | "L";
+    codigoBarras?: string;
+    custo?: number;
+    precoVenda?: number;
+  }>
+) {
   const session = await getSession();
   if (!session) return { success: false, message: "Não autorizado" };
 
   try {
-    let count = 0;
+    let criados = 0;
+    let atualizados = 0;
     const categoriaCache = new Map<string, string>();
 
     for (const item of itensImportados) {
-      if (!item.nome) continue;
-
-      const nomeCategoria = item.categoria || "Geral";
-      let categoriaId = categoriaCache.get(nomeCategoria);
-
-      if (!categoriaId) {
-        const baseWhere: any = {
-          nome: { equals: nomeCategoria, mode: "insensitive" },
-          ownerId: session.ownerId,
-        };
-        if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
-
-        const catExistente = await prisma.categoria.findFirst({
-          where: baseWhere,
-        });
-
-        if (catExistente) {
-          categoriaId = catExistente.id;
-        } else {
-          const novaCat = await prisma.categoria.create({
-            data: {
-              nome: nomeCategoria,
-              status: "ativa",
-              ownerId: session.ownerId,
-              ...(session.activeLojaId && { lojaId: session.activeLojaId }),
-            },
-          });
-          categoriaId = novaCat.id;
-        }
-        categoriaCache.set(nomeCategoria, categoriaId);
-      }
-
+      if (!item.codigoInterno) continue;
 
       const searchWhere: any = {
         codigoInterno: item.codigoInterno,
@@ -308,23 +288,95 @@ export async function importarItens(itensImportados: Item[]) {
       if (session.activeLojaId) {
         searchWhere.lojaId = session.activeLojaId;
       }
-      
-      const itemExistenteParaUpsert = await prisma.item.findFirst({
+
+      const itemExistente = await prisma.item.findFirst({
         where: searchWhere,
       });
 
-      if (itemExistenteParaUpsert) {
-        await prisma.item.update({
-          where: { id: itemExistenteParaUpsert.id },
-          data: {
-            nome: item.nome,
-            precoVenda: item.precoVenda,
-            custo: item.custo,
-            unidade: parseUnidade(item.unidade),
-            categoriaId: categoriaId,
+      // Se temos nome de categoria definido, obtém ou cria categoriaId
+      let categoriaId: string | undefined = undefined;
+      if (item.categoria) {
+        const nomeCategoria = item.categoria;
+        categoriaId = categoriaCache.get(nomeCategoria);
+
+        if (!categoriaId) {
+          const baseWhere: any = {
+            nome: { equals: nomeCategoria, mode: "insensitive" },
+            ownerId: session.ownerId,
+          };
+          if (session.activeLojaId) baseWhere.lojaId = session.activeLojaId;
+
+          const catExistente = await prisma.categoria.findFirst({
+            where: baseWhere,
+          });
+
+          if (catExistente) {
+            categoriaId = catExistente.id;
+          } else {
+            const novaCat = await prisma.categoria.create({
+              data: {
+                nome: nomeCategoria,
+                status: "ativa",
+                ownerId: session.ownerId,
+                ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+              },
+            });
+            categoriaId = novaCat.id;
           }
-        });
+          categoriaCache.set(nomeCategoria, categoriaId);
+        }
+      }
+
+      if (itemExistente) {
+        // ATUALIZAÇÃO: Mescla apenas os campos fornecidos
+        const updateData: any = {};
+        if (item.nome !== undefined && item.nome.trim() !== "") updateData.nome = item.nome;
+        if (item.precoVenda !== undefined) updateData.precoVenda = item.precoVenda;
+        if (item.custo !== undefined) updateData.custo = item.custo;
+        if (item.unidade !== undefined) updateData.unidade = parseUnidade(item.unidade);
+        if (item.codigoBarras !== undefined) updateData.codigoBarras = item.codigoBarras || null;
+        if (categoriaId) updateData.categoriaId = categoriaId;
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.item.update({
+            where: { id: itemExistente.id },
+            data: updateData,
+          });
+          atualizados++;
+        }
       } else {
+        // NOVO ITEM: Requer ao menos um nome
+        if (!item.nome) continue;
+
+        // Se categoria não foi informada, assegura que haja a categoria "Geral"
+        if (!categoriaId) {
+          const nomeCategoria = "Geral";
+          categoriaId = categoriaCache.get(nomeCategoria);
+          if (!categoriaId) {
+            const catExistente = await prisma.categoria.findFirst({
+              where: {
+                nome: { equals: nomeCategoria, mode: "insensitive" },
+                ownerId: session.ownerId,
+                ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+              },
+            });
+            if (catExistente) {
+              categoriaId = catExistente.id;
+            } else {
+              const novaCat = await prisma.categoria.create({
+                data: {
+                  nome: nomeCategoria,
+                  status: "ativa",
+                  ownerId: session.ownerId,
+                  ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+                },
+              });
+              categoriaId = novaCat.id;
+            }
+            categoriaCache.set(nomeCategoria, categoriaId);
+          }
+        }
+
         await prisma.item.create({
           data: {
             codigoInterno: item.codigoInterno,
@@ -332,20 +384,24 @@ export async function importarItens(itensImportados: Item[]) {
             codigoBarras: item.codigoBarras || null,
             precoVenda: item.precoVenda || 0,
             custo: item.custo || 0,
-            unidade: parseUnidade(item.unidade),
-            categoriaId: categoriaId,
+            unidade: parseUnidade(item.unidade || "UN"),
+            categoriaId: categoriaId!,
             status: "ativo",
             ownerId: session.ownerId,
             ...(session.activeLojaId && { lojaId: session.activeLojaId }),
-          }
+          },
         });
+        criados++;
       }
-
-      count++;
     }
 
     revalidatePath("/catalogo");
-    return { success: true, count };
+    return {
+      success: true,
+      count: criados + atualizados,
+      criados,
+      atualizados,
+    };
   } catch (error) {
     console.error("Erro na importação:", error);
     return { success: false, message: "Falha ao processar importação." };

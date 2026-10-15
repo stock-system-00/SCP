@@ -40,7 +40,7 @@ import {
 import { Item } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { useAuth } from "@/lib/auth-context";
-import { parseItemsCSV, parsePrecosCSV } from "@/lib/csv-parser";
+import { parseItemsCSV } from "@/lib/csv-parser";
 
 
 import {
@@ -50,7 +50,6 @@ import {
   createItem,
   updateItem,
   importarItens,
-  atualizarPrecosLote,
   CreateItemData,
 } from "@/app/actions/catalogo";
 import { getCategorias } from "@/app/actions/categorias";
@@ -109,10 +108,6 @@ export default function CatalogoPage() {
 
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-
-  const [isUpdatingPrecos, setIsUpdatingPrecos] = useState(false);
-  const fileInputPrecosRef = useRef<HTMLInputElement>(null);
 
 
   useEffect(() => {
@@ -223,8 +218,17 @@ export default function CatalogoPage() {
 
       if (result.success) {
         toast.dismiss();
+        const msg = [];
+        if (result.criados && result.criados > 0) {
+          msg.push(`${result.criados} ${result.criados === 1 ? "item cadastrado" : "itens cadastrados"}`);
+        }
+        if (result.atualizados && result.atualizados > 0) {
+          msg.push(`${result.atualizados} ${result.atualizados === 1 ? "atualizado" : "atualizados"}`);
+        }
         toast.success(
-          `${result.count} itens importados/atualizados com sucesso!`,
+          msg.length > 0
+            ? `${msg.join(" e ")} com sucesso!`
+            : "Nenhuma alteração necessária.",
         );
         loadData();
       } else {
@@ -240,48 +244,9 @@ export default function CatalogoPage() {
     }
   };
 
-  const handleFileUploadPrecos = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsUpdatingPrecos(true);
-    toast.info("Lendo arquivo de preços CSV...");
-
-    try {
-      const parsedPrecos = await parsePrecosCSV(file);
-
-      if (parsedPrecos.length === 0) {
-        toast.warning("O arquivo de preços parece estar vazio ou inválido.");
-        setIsUpdatingPrecos(false);
-        return;
-      }
-
-      toast.loading(`Atualizando preços de ${parsedPrecos.length} itens encontrados no CSV...`);
-
-      const result = await atualizarPrecosLote(parsedPrecos);
-
-      if (result.success) {
-        toast.dismiss();
-        toast.success(`${result.count} preços atualizados com sucesso! (Itens não encontrados foram descartados)`);
-        loadData();
-      } else {
-        toast.dismiss();
-        toast.error(result.message || "Erro ao atualizar preços.");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Erro ao processar o arquivo de preços.");
-    } finally {
-      setIsUpdatingPrecos(false);
-      if (fileInputPrecosRef.current) fileInputPrecosRef.current.value = "";
-    }
-  };
-
   const handleDownloadTemplate = () => {
     const headers = "codigoInterno;nome;categoria;unidade;codigoBarras;custo;precoVenda\n";
-    const example = "001;PRODUTO EXEMPLO;GERAL;UN;7890000000000;10,50;20,00\n";
+    const example = "001;PRODUTO EXEMPLO;GERAL;UN;7890000000000;10,50;20,00\n002;OUTRO PRODUTO;GERAL;UN;;15,00;30,00\n";
     
     const blob = new Blob(["\uFEFF" + headers + example], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -292,6 +257,54 @@ export default function CatalogoPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportarCatalogo = () => {
+    if (items.length === 0) {
+      toast.warning("Nenhum item disponível para exportação.");
+      return;
+    }
+
+    const headers = "codigoInterno;nome;categoria;unidade;codigoBarras;custo;precoVenda;status\n";
+    const escapeCsv = (val: string | number | undefined | null) => {
+      if (val === undefined || val === null) return "";
+      const str = String(val).replace(/"/g, '""');
+      return str.includes(";") || str.includes("\n") || str.includes('"') ? `"${str}"` : str;
+    };
+
+    const formatMoneyBr = (val: number | undefined) => {
+      if (val === undefined || isNaN(val)) return "0,00";
+      return val.toFixed(2).replace(".", ",");
+    };
+
+    const rows = items
+      .map((item) => {
+        return [
+          escapeCsv(item.codigoInterno),
+          escapeCsv(item.nome),
+          escapeCsv(item.categoria),
+          escapeCsv(item.unidade),
+          escapeCsv(item.codigoBarras || ""),
+          formatMoneyBr(item.custo),
+          formatMoneyBr(item.precoVenda),
+          escapeCsv(item.status),
+        ].join(";");
+      })
+      .join("\n");
+
+    const blob = new Blob(["\uFEFF" + headers + rows + "\n"], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const dataStr = new Date().toISOString().slice(0, 10);
+    link.download = `catalogo_produtos_${dataStr}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`${items.length} itens exportados com sucesso!`);
   };
 
   const handleSaveItem = async (itemData: Partial<Item>) => {
@@ -414,31 +427,15 @@ export default function CatalogoPage() {
             </>
           )}
 
-          {}
-          {hasPermission("catalogo:editar") && (
-            <>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                ref={fileInputPrecosRef}
-                onChange={handleFileUploadPrecos}
-              />
-              <Button
-                variant="secondary"
-                onClick={() => fileInputPrecosRef.current?.click()}
-                disabled={isUpdatingPrecos}
-                className="hidden md:inline-flex"
-              >
-                {isUpdatingPrecos ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="mr-2 h-4 w-4" />
-                )}
-                {isUpdatingPrecos ? "Atualizando..." : "Atualizar Preços"}
-              </Button>
-            </>
-          )}
+          <Button
+            variant="outline"
+            onClick={handleExportarCatalogo}
+            className="hidden md:inline-flex"
+            title="Exportar todos os produtos do catálogo para CSV"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar Catálogo
+          </Button>
 
           {}
           {hasPermission("catalogo:criar") && (

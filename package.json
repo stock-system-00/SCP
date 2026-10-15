@@ -103,6 +103,9 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@google/genai",
+      "@prisma/engines",
+      "core-js",
+      "prisma",
       "protobufjs"
     ]
   }

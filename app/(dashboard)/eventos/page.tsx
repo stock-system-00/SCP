@@ -44,6 +44,8 @@ import {
 } from "@/components/eventos/eventos-grid";
 import { EventosTable } from "@/components/eventos/eventos-table";
 import { PageHeader } from "@/components/PageHeader";
+import { RelatorioPerdasDataModal } from "@/components/eventos/relatorio-perdas-data-modal";
+import { FileSpreadsheet } from "lucide-react";
 
 type ViewMode = "pastas" | "lista-completa";
 
@@ -62,6 +64,7 @@ export default function EventosPage() {
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [currentPage, setCurrentPage] = useState(1);
   const [eventoToDelete, setEventoToDelete] = useState<string | null>(null);
+  const [isRelatorioModalOpen, setIsRelatorioModalOpen] = useState(false);
 
   const fetcher = async () => {
     const result = await getEventos();
@@ -426,7 +429,17 @@ export default function EventosPage() {
       <PageHeader 
         title="Eventos e Lotes" 
         description="Gestão de aprovação e conferência."
-      />
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsRelatorioModalOpen(true)}
+          className="gap-1.5 border-primary/20 hover:bg-primary/5 text-xs h-8"
+        >
+          <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
+          Relatório por Data / NF-e
+        </Button>
+      </PageHeader>
       <main className={`flex-1 flex flex-col space-y-4 px-4 py-5 md:px-8 md:py-6 overflow-hidden ${hideScrollClass}`}>
       <EventosToolbar
         globalSearch={globalSearch}
@@ -476,6 +489,12 @@ export default function EventosPage() {
         open={!!eventoToDelete}
         onOpenChange={(open: boolean) => !open && setEventoToDelete(null)}
         onConfirm={confirmDelete}
+      />
+
+      <RelatorioPerdasDataModal
+        open={isRelatorioModalOpen}
+        onOpenChange={setIsRelatorioModalOpen}
+        eventos={eventosDoBanco}
       />
       </main>
     </>

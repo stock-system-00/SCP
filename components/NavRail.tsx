@@ -45,20 +45,20 @@ export function NavRail() {
       ]
     },
     {
-      title: "Cadastros",
-      items: [
-        { icon: Store, label: "Catálogo", href: "/catalogo", permission: "catalogo:ver" },
-        { icon: Grid, label: "Categorias", href: "/categorias", permission: "categorias:ver" },
-        { icon: AlertCircle, label: "Motivos", href: "/motivos", permission: "motivos:ver" },
-      ]
-    },
-    {
       title: "Registros",
       items: [
         { icon: Calendar, label: "Eventos", href: "/eventos", permission: "eventos:menu" },
         { icon: ImageIcon, label: "Galeria", href: "/galeria", permission: "galeria:ver" },
         { icon: BarChart2, label: "Vendas", href: "/vendas", permission: "vendas:ver" },
         { icon: Receipt, label: "Importação NFe", href: "/nfe-importacao", permission: "notas:importar" },
+      ]
+    },
+    {
+      title: "Cadastros",
+      items: [
+        { icon: Store, label: "Catálogo", href: "/catalogo", permission: "catalogo:ver" },
+        { icon: Grid, label: "Categorias", href: "/categorias", permission: "categorias:ver" },
+        { icon: AlertCircle, label: "Motivos", href: "/motivos", permission: "motivos:ver" },
       ]
     }
   ];

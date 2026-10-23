@@ -18,8 +18,14 @@ export async function loginAction(email: string, password?: string) {
   if (!password) return { success: false, message: "Senha obrigatória" };
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const cleanEmail = email.trim();
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: cleanEmail,
+          mode: "insensitive"
+        }
+      },
     });
 
     if (!user) {

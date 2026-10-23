@@ -20,13 +20,40 @@ function extractTagValue(xml: string, tag: string): string | null {
   return match ? match[1].trim() : null;
 }
 
+function extractEmitente(xml: string): string | null {
+  const emitMatch = xml.match(/<emit[\s\S]*?<\/emit>/i);
+  if (emitMatch) {
+    return extractTagValue(emitMatch[0], "xNome");
+  }
+  return extractTagValue(xml, "xNome");
+}
+
+export interface BatchItemResult {
+  fileName: string;
+  status: "imported" | "skipped_duplicate" | "error";
+  numero?: string;
+  emitente?: string;
+  dataEmissao?: string;
+  totalItens?: number;
+  valorTotal?: number;
+  message?: string;
+  nfeId?: string;
+}
+
 export async function recalcularCustosItem(itemId: string, ownerId: string) {
   try {
+    const item = await prisma.item.findUnique({
+      where: { id: itemId },
+      select: { lojaId: true }
+    });
 
     const nfeItens = await prisma.nFeCompraItem.findMany({
       where: {
         itemId: itemId,
-        nfeCompra: { ownerId: ownerId }
+        nfeCompra: {
+          ownerId: ownerId,
+          ...(item?.lojaId && { lojaId: item.lojaId })
+        }
       },
       include: {
         nfeCompra: true
@@ -97,7 +124,7 @@ export async function importNFeXML(formData: FormData) {
 
 
     const numero = extractTagValue(xmlText, "nNF");
-    const emitente = extractTagValue(xmlText, "xNome");
+    const emitente = extractEmitente(xmlText);
     const dataEmissaoRaw = extractTagValue(xmlText, "dhEmi") || extractTagValue(xmlText, "dEmi");
     const valorTotalRaw = extractTagValue(xmlText, "vNF");
     
@@ -160,7 +187,10 @@ export async function importNFeXML(formData: FormData) {
     const cProdList = itensNFe.map((i) => i.cProd);
     const mappedSuppliers = await prisma.itemFornecedor.findMany({
       where: { 
-        item: { ownerId: user.ownerId },
+        item: {
+          ownerId: user.ownerId,
+          ...(user.activeLojaId && { lojaId: user.activeLojaId })
+        },
         codigoFornecedor: { in: cProdList }
       }
     });
@@ -242,10 +272,18 @@ export async function mapItemToCatalog(nfeItemId: string, catalogItemId: string,
 
 
 
+    const catalogItem = await prisma.item.findUnique({
+      where: { id: catalogItemId },
+      select: { lojaId: true }
+    });
+
     await prisma.nFeCompraItem.updateMany({
       where: {
         codigoFornecedor: codigoFornecedor,
-        nfeCompra: { ownerId: user.ownerId },
+        nfeCompra: {
+          ownerId: user.ownerId,
+          ...(catalogItem?.lojaId ? { lojaId: catalogItem.lojaId } : (user.activeLojaId && { lojaId: user.activeLojaId }))
+        },
         itemId: null
       },
       data: {
@@ -284,11 +322,19 @@ export async function unmapItemFromCatalog(nfeItemId: string, catalogItemId: str
     });
 
 
+    const catalogItem = await prisma.item.findUnique({
+      where: { id: catalogItemId },
+      select: { lojaId: true }
+    });
+
     await prisma.nFeCompraItem.updateMany({
       where: {
         codigoFornecedor: codigoFornecedor,
         itemId: catalogItemId,
-        nfeCompra: { ownerId: user.ownerId }
+        nfeCompra: {
+          ownerId: user.ownerId,
+          ...(catalogItem?.lojaId ? { lojaId: catalogItem.lojaId } : (user.activeLojaId && { lojaId: user.activeLojaId }))
+        }
       },
       data: {
         itemId: null
@@ -344,3 +390,195 @@ export async function deleteNFeImport(id: string) {
     return { success: false, error: "Falha ao excluir a importação da Nota." };
   }
 }
+
+export async function importSingleNFeBatchItem(formData: FormData): Promise<BatchItemResult> {
+  const fileName = (formData.get("fileName") as string) || "Arquivo XML";
+  try {
+    const user = await getSession();
+    if (!user || !user.ownerId) {
+      return {
+        fileName,
+        status: "error",
+        message: "Usuário não autenticado ou sem permissão."
+      };
+    }
+
+    const file = formData.get("file") as File;
+    if (!file) {
+      return {
+        fileName,
+        status: "error",
+        message: "Nenhum arquivo enviado para importação."
+      };
+    }
+
+    const xmlText = await file.text();
+
+    if (!xmlText.includes("<nfeProc") && !xmlText.includes("<NFe") && !xmlText.includes("<infNFe")) {
+      return {
+        fileName,
+        status: "error",
+        message: "Arquivo não contém a estrutura de uma NF-e válida."
+      };
+    }
+
+    const numero = extractTagValue(xmlText, "nNF");
+    const emitente = extractEmitente(xmlText);
+    const dataEmissaoRaw = extractTagValue(xmlText, "dhEmi") || extractTagValue(xmlText, "dEmi");
+    const valorTotalRaw = extractTagValue(xmlText, "vNF");
+
+    const dataEmissao = dataEmissaoRaw ? new Date(dataEmissaoRaw) : null;
+    const valorTotal = valorTotalRaw ? parseFloat(valorTotalRaw) : 0;
+
+    // 1. CHECAGEM DE DUPLICIDADE:
+    // Se a nota fiscal já existe para este owner/loja, NÃO SOBRESCREVE NADA!
+    // Apenas retorna status 'skipped_duplicate' preservando a integridade existente.
+    if (numero) {
+      const existeNfe = await prisma.nFeCompra.findFirst({
+        where: {
+          numero,
+          emitente: emitente || undefined,
+          ownerId: user.ownerId,
+          ...(user.activeLojaId && { lojaId: user.activeLojaId })
+        },
+        select: {
+          id: true,
+          numero: true,
+          emitente: true,
+          dataEmissao: true,
+          valorTotal: true,
+          itens: { select: { id: true } }
+        }
+      });
+
+      if (existeNfe) {
+        return {
+          fileName,
+          status: "skipped_duplicate",
+          numero: existeNfe.numero || numero,
+          emitente: existeNfe.emitente || emitente || "Desconhecido",
+          dataEmissao: existeNfe.dataEmissao ? existeNfe.dataEmissao.toISOString() : undefined,
+          totalItens: existeNfe.itens.length,
+          valorTotal: existeNfe.valorTotal ? Number(existeNfe.valorTotal) : undefined,
+          message: "Nota fiscal já cadastrada no sistema. Mantida intacta sem alterações.",
+          nfeId: existeNfe.id
+        };
+      }
+    }
+
+    // 2. Extração de produtos
+    const detGroups = xmlText.split(/<det /i).slice(1);
+    const itensNFe: NFeItemExtracted[] = [];
+
+    for (const det of detGroups) {
+      const prodGroupMatch = det.match(/<prod>([\s\S]*?)<\/prod>/i);
+      if (prodGroupMatch) {
+        const prodXml = prodGroupMatch[1];
+
+        const cProd = extractTagValue(prodXml, "cProd");
+        const xProd = extractTagValue(prodXml, "xProd");
+        const uCom = extractTagValue(prodXml, "uCom");
+        const qComRaw = extractTagValue(prodXml, "qCom");
+        const vUnComRaw = extractTagValue(prodXml, "vUnCom");
+        const vProdRaw = extractTagValue(prodXml, "vProd");
+
+        if (cProd && xProd) {
+          itensNFe.push({
+            cProd,
+            xProd,
+            uCom: uCom || "",
+            qCom: qComRaw ? parseFloat(qComRaw) : 0,
+            vUnCom: vUnComRaw ? parseFloat(vUnComRaw) : 0,
+            vProd: vProdRaw ? parseFloat(vProdRaw) : 0,
+          });
+        }
+      }
+    }
+
+    if (itensNFe.length === 0) {
+      return {
+        fileName,
+        status: "error",
+        numero: numero || undefined,
+        emitente: emitente || undefined,
+        message: "Nenhum produto (<prod>) encontrado no XML."
+      };
+    }
+
+    // 3. Mapeamento automático de itens já conhecidos no catálogo
+    const cProdList = itensNFe.map((i) => i.cProd);
+    const mappedSuppliers = await prisma.itemFornecedor.findMany({
+      where: {
+        item: {
+          ownerId: user.ownerId,
+          ...(user.activeLojaId && { lojaId: user.activeLojaId })
+        },
+        codigoFornecedor: { in: cProdList }
+      }
+    });
+
+    const mappedItemsToSave = [];
+    for (const nfeItem of itensNFe) {
+      const match = mappedSuppliers.find((s: any) => s.codigoFornecedor === nfeItem.cProd);
+
+      mappedItemsToSave.push({
+        codigoFornecedor: nfeItem.cProd,
+        descricaoFornecedor: nfeItem.xProd,
+        unidade: nfeItem.uCom,
+        quantidade: nfeItem.qCom,
+        valorUnitario: nfeItem.vUnCom,
+        valorTotal: nfeItem.vProd,
+        itemId: match ? match.itemId : null
+      });
+    }
+
+    // 4. Salvar nova nota no Banco
+    const nfe = await prisma.nFeCompra.create({
+      data: {
+        numero,
+        emitente,
+        dataEmissao,
+        valorTotal,
+        xmlContent: xmlText,
+        ownerId: user.ownerId,
+        lojaId: user.activeLojaId || null,
+        itens: {
+          create: mappedItemsToSave
+        }
+      }
+    });
+
+    // 5. Recalcular custos para itens mapeados automaticamente
+    const mappedIds = new Set<string>();
+    for (const m of mappedItemsToSave) {
+      if (m.itemId) mappedIds.add(m.itemId);
+    }
+    if (mappedIds.size > 0) {
+      await Promise.all(
+        Array.from(mappedIds).map(id => recalcularCustosItem(id, user.ownerId!))
+      );
+    }
+
+    revalidatePath("/nfe-importacao");
+
+    return {
+      fileName,
+      status: "imported",
+      numero: nfe.numero || numero || "S/N",
+      emitente: nfe.emitente || emitente || "Desconhecido",
+      dataEmissao: dataEmissao ? dataEmissao.toISOString() : undefined,
+      totalItens: itensNFe.length,
+      valorTotal,
+      nfeId: nfe.id,
+      message: `${itensNFe.length} itens importados (${mappedIds.size} vinculados automaticamente).`
+    };
+  } catch (error: any) {
+    console.error("Erro importSingleNFeBatchItem:", error);
+    return {
+      fileName,
+      status: "error",
+      message: error.message || "Erro inesperado ao processar arquivo."
+    };
+  }
+}
+

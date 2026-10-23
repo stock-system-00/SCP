@@ -122,7 +122,10 @@ export async function getDadosEvolucao(
 
 
     const produtos = await prisma.item.findMany({
-      where: { ownerId: session.ownerId },
+      where: {
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId })
+      },
       select: { id: true, nome: true, codigoInterno: true },
       orderBy: { nome: "asc" }
     });

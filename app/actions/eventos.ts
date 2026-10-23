@@ -161,6 +161,7 @@ export async function createEvento(data: CreateEventoData) {
             userId: session.id,
             motivo: data.motivo,
             ownerId: session.ownerId,
+            lojaId: session.activeLojaId || null,
           })),
         },
       },

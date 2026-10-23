@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { ImportNFeForm } from "@/components/nfe/ImportNFeForm";
+import { BatchImportNFeModal } from "@/components/nfe/BatchImportNFeModal";
 import { HistoricoNFeList } from "@/components/nfe/HistoricoNFeList";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -39,7 +40,10 @@ export default async function NFeImportacaoPage(props: {
   const statusFilter = searchParams?.status as string || "todos";
   const searchQuery = searchParams?.search as string || "";
 
-  const whereClause: any = { ownerId: user.ownerId };
+  const whereClause: any = {
+    ownerId: user.ownerId,
+    ...(user.activeLojaId && { lojaId: user.activeLojaId })
+  };
   whereClause.AND = [];
 
   if (statusFilter === "pendente") {
@@ -82,7 +86,10 @@ export default async function NFeImportacaoPage(props: {
 
   const historicoRaw = await prisma.nFeCompra.findMany({
     where: whereClause,
-    orderBy: { dataImportacao: "desc" },
+    orderBy: [
+      { dataEmissao: { sort: "desc", nulls: "last" } },
+      { dataImportacao: "desc" }
+    ],
     skip,
     take: pageSize,
     include: {
@@ -111,9 +118,9 @@ export default async function NFeImportacaoPage(props: {
         description="Importe arquivos XML das notas fiscais e mapeie os produtos."
       />
       <main className="flex-1 space-y-6 px-4 py-5 md:px-8 md:py-6 overflow-y-auto">
-        { }
-        <div className="hidden md:block">
-          <ImportNFeForm />
+        {/* Formulário / Botão de Importação */}
+        <div className="hidden md:flex items-center gap-3">
+          <BatchImportNFeModal />
         </div>
 
         { }

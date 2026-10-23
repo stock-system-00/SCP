@@ -35,6 +35,8 @@ export interface Item {
   precoVenda: number;
   imagemUrl?: string;
   status: "ativo" | "inativo";
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export type EventoStatus =

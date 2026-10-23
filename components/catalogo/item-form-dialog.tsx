@@ -22,9 +22,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Item } from "@/lib/types";
 import { getCategorias } from "@/app/actions/categorias";
-import { Upload, Image as ImageIcon, X, Barcode, Loader2, Link2, Trash2, Plus } from "lucide-react";
+import { Upload, Image as ImageIcon, X, Barcode, Loader2, Link2, Trash2, Plus, Calendar } from "lucide-react";
 import { getItemFornecedores, deleteItemFornecedor, createItemFornecedor } from "@/app/actions/catalogo";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface ItemFormDialogProps {
   open: boolean;
@@ -182,15 +184,46 @@ export function ItemFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-none sm:max-w-2xl h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[95vh] w-screen sm:w-full p-0 sm:p-6 flex flex-col gap-0 rounded-none sm:rounded-lg overflow-hidden border-0 sm:border">
         <DialogHeader className="p-4 sm:p-0 border-b sm:border-none shrink-0 bg-background z-10">
-          <DialogTitle>{isEditing ? "Editar Item" : "Novo Item"}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? "Atualize os dados do produto."
-              : "Preencha os dados para cadastrar."}
-          </DialogDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <DialogTitle>{isEditing ? "Editar Item" : "Novo Item"}</DialogTitle>
+              <DialogDescription>
+                {isEditing
+                  ? "Atualize os dados do produto."
+                  : "Preencha os dados para cadastrar."}
+              </DialogDescription>
+            </div>
+            {isEditing && item?.createdAt && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-muted/60 border border-border text-xs text-muted-foreground w-fit">
+                <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>
+                  Cadastrado em:{" "}
+                  <strong className="text-foreground font-medium">
+                    {format(new Date(item.createdAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                  </strong>
+                </span>
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto p-4 sm:p-0 grid gap-6 sm:py-4">
+          {isEditing && item?.createdAt && (
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl bg-primary/5 border border-primary/20 text-xs text-muted-foreground">
+              <Calendar className="w-4 h-4 text-primary shrink-0" />
+              <span>
+                Item cadastrado no sistema em{" "}
+                <strong className="text-foreground font-semibold">
+                  {format(new Date(item.createdAt), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                </strong>
+                {item.updatedAt && (
+                  <span className="text-muted-foreground/80 ml-1.5">
+                    (Última alteração: {format(new Date(item.updatedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })})
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
           {}
           <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
             <Label>Imagem do Produto</Label>

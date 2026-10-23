@@ -188,7 +188,10 @@ export async function getRealDashboardMetrics(diasIsoA: string[], diasIsoB: stri
 
 
     const itens = await prisma.item.findMany({
-      where: { ownerId: session.ownerId },
+      where: {
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId })
+      },
       select: { id: true, codigoInterno: true, nome: true, custo: true, precoVenda: true, categoria: { select: { nome: true } } }
     });
 

@@ -42,13 +42,32 @@ export default async function NFeDetalhesPage(props: {
     }
   });
 
-  if (!nfe) redirect("/nfe-importacao");
+  if (!nfe || (user.activeLojaId && nfe.lojaId && nfe.lojaId !== user.activeLojaId)) {
+    redirect("/nfe-importacao");
+  }
 
 
-  const catalogo = await prisma.item.findMany({
-    where: { ownerId: user.ownerId, status: "ativo" },
-    select: { id: true, nome: true, codigoInterno: true }
+  const targetLojaId = nfe.lojaId || user.activeLojaId;
+  const catalogoRaw = await prisma.item.findMany({
+    where: {
+      ownerId: user.ownerId,
+      status: "ativo",
+      ...(targetLojaId && { lojaId: targetLojaId })
+    },
+    select: { id: true, nome: true, codigoInterno: true },
+    orderBy: { nome: "asc" }
   });
+
+  // Evita exibir itens repetidos (com mesmo nome e código interno)
+  const seenItems = new Set<string>();
+  const catalogo: { id: string; nome: string; codigoInterno: string }[] = [];
+  for (const catItem of catalogoRaw) {
+    const key = `${catItem.nome.trim().toLowerCase()}___${catItem.codigoInterno.trim().toLowerCase()}`;
+    if (!seenItems.has(key)) {
+      seenItems.add(key);
+      catalogo.push(catItem);
+    }
+  }
 
 
   const itens = nfe.itens.map((item: any) => ({
@@ -72,8 +91,8 @@ export default async function NFeDetalhesPage(props: {
               </Link>
             </Button>
             <PageHeader 
-              title="Detalhes da Importação NFe"
-              description={`Importado em ${format(new Date(nfe.dataImportacao), "dd/MM/yyyy 'às' HH:mm")}`}
+              title={nfe.numero ? `NF-e Nº ${nfe.numero}` : "Detalhes da Importação NFe"}
+              description={`${nfe.emitente ? `${nfe.emitente} • ` : ""}Importado em ${format(new Date(nfe.dataImportacao), "dd/MM/yyyy 'às' HH:mm")}`}
             />
           </div>
           <div className="flex-shrink-0">
@@ -81,7 +100,18 @@ export default async function NFeDetalhesPage(props: {
           </div>
         </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="bg-surface p-4 rounded-2xl border">
+          <p className="text-xs text-muted-foreground mb-1 uppercase font-semibold">Número da Nota</p>
+          <p className="font-semibold text-foreground text-base">
+            {nfe.numero ? `Nº ${nfe.numero}` : "Não informado"}
+          </p>
+          {nfe.emitente && (
+            <p className="text-xs text-muted-foreground mt-0.5 truncate" title={nfe.emitente}>
+              {nfe.emitente}
+            </p>
+          )}
+        </div>
         <div className="bg-surface p-4 rounded-2xl border">
           <p className="text-xs text-muted-foreground mb-1 uppercase font-semibold">Data de Emissão</p>
           <p className="font-medium text-foreground">
@@ -100,7 +130,7 @@ export default async function NFeDetalhesPage(props: {
             {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(nfe.valorTotal || 0))}
           </p>
         </div>
-        <div className="bg-surface p-4 rounded-2xl border">
+        <div className="bg-surface p-4 rounded-2xl border col-span-2 md:col-span-1">
           <p className="text-xs text-muted-foreground mb-1 uppercase font-semibold">Status do Mapeamento</p>
           <div className="flex items-center gap-2">
             {pendentes.length > 0 ? (

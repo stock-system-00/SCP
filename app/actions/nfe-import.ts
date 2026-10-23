@@ -4,6 +4,9 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
+import { r2 } from "@/lib/r2";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { randomUUID } from "crypto";
 
 interface NFeItemExtracted {
   cProd: string;
@@ -26,6 +29,33 @@ function extractEmitente(xml: string): string | null {
     return extractTagValue(emitMatch[0], "xNome");
   }
   return extractTagValue(xml, "xNome");
+}
+
+async function uploadXmlToR2(xmlText: string, fileName: string, ownerId: string): Promise<string | null> {
+  try {
+    const bucketName = process.env.R2_BUCKET_NAME;
+    const publicDomain = process.env.R2_PUBLIC_DOMAIN;
+    if (!bucketName || !publicDomain) return null;
+
+    const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const key = `nfe-compras/${ownerId}/${randomUUID()}-${safeName}`;
+    const buffer = Buffer.from(xmlText, "utf-8");
+
+    await r2.send(
+      new PutObjectCommand({
+        Bucket: bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: "application/xml",
+      })
+    );
+
+    const domain = publicDomain.replace(/\/$/, "");
+    return `${domain}/${key}`;
+  } catch (err) {
+    console.error("Erro ao enviar XML da NF-e para o Cloudflare R2:", err);
+    return null;
+  }
 }
 
 export interface BatchItemResult {
@@ -210,6 +240,9 @@ export async function importNFeXML(formData: FormData) {
       });
     }
 
+    // Salvar o arquivo XML no Cloudflare R2 (gratuito) para não pesar o tráfego do Neon
+    const r2XmlUrl = await uploadXmlToR2(xmlText, file.name || `nfe-${numero || "compras"}.xml`, user.ownerId);
+
     // Salvar no Banco
     const nfe = await prisma.nFeCompra.create({
       data: {
@@ -217,7 +250,7 @@ export async function importNFeXML(formData: FormData) {
         emitente,
         dataEmissao,
         valorTotal,
-        xmlContent: xmlText,
+        xmlContent: r2XmlUrl || null,
         ownerId: user.ownerId,
         lojaId: user.activeLojaId || null,
         itens: {
@@ -532,6 +565,9 @@ export async function importSingleNFeBatchItem(formData: FormData): Promise<Batc
       });
     }
 
+    // Salvar o arquivo XML no Cloudflare R2 (gratuito) para não pesar o tráfego do Neon
+    const r2XmlUrl = await uploadXmlToR2(xmlText, fileName || `nfe-${numero || "compras"}.xml`, user.ownerId);
+
     // 4. Salvar nova nota no Banco
     const nfe = await prisma.nFeCompra.create({
       data: {
@@ -539,7 +575,7 @@ export async function importSingleNFeBatchItem(formData: FormData): Promise<Batc
         emitente,
         dataEmissao,
         valorTotal,
-        xmlContent: xmlText,
+        xmlContent: r2XmlUrl || null,
         ownerId: user.ownerId,
         lojaId: user.activeLojaId || null,
         itens: {

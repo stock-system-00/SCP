@@ -79,7 +79,7 @@ export async function createNota(data: any) {
         dataReferencia: data.dataReferencia,
         naturezaOperacao: data.naturezaOperacao,
         chaveAcesso: data.chaveAcesso,
-        xmlContent: data.xmlContent,
+        xmlContent: data.xmlUrl ? null : data.xmlContent,
         pdfUrl: data.pdfUrl,
         xmlUrl: data.xmlUrl,
         eventoId: data.eventoId,

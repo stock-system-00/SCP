@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,10 +19,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Item } from "@/lib/types";
 import { getCategorias } from "@/app/actions/categorias";
-import { Upload, Image as ImageIcon, X, Barcode, Loader2, Link2, Trash2, Plus, Calendar } from "lucide-react";
+import { Barcode, Loader2, Link2, Plus, Calendar, X } from "lucide-react";
 import { getItemFornecedores, deleteItemFornecedor, createItemFornecedor } from "@/app/actions/catalogo";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -42,21 +41,13 @@ export function ItemFormDialog({
   onSave,
 }: ItemFormDialogProps) {
   const isEditing = !!item;
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
 
   const [formData, setFormData] = useState<Partial<Item>>({});
 
-
   const [isSaving, setIsSaving] = useState(false);
-
 
   const [categorias, setCategorias] = useState<string[]>([]);
   const [loadingCategorias, setLoadingCategorias] = useState(false);
-
-
-  const [imageTab, setImageTab] = useState<"url" | "upload">("upload");
-  const [previewUrl, setPreviewUrl] = useState<string>("");
 
   // Estados de Fornecedores Vinculados
   const [fornecedores, setFornecedores] = useState<any[]>([]);
@@ -89,18 +80,13 @@ export function ItemFormDialog({
     setLoadingCategorias(false);
   };
 
-
   useEffect(() => {
     if (open) {
       if (item) {
         setFormData(item);
-        setPreviewUrl(item.imagemUrl || "");
-        setImageTab(item.imagemUrl?.startsWith("blob:") ? "upload" : "url");
         loadFornecedores(item.id);
       } else {
         setFormData({ unidade: "UN", status: "ativo" });
-        setPreviewUrl("");
-        setImageTab("upload");
         setFornecedores([]);
       }
     }
@@ -141,24 +127,6 @@ export function ItemFormDialog({
 
   const handleInputChange = (field: keyof Item, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Manipular Upload de Arquivo Local
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Cria o preview
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
-
-      // Converte para Base64 para salvar
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        handleInputChange("imagemUrl", base64String);
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleSave = async () => {
@@ -225,89 +193,6 @@ export function ItemFormDialog({
             </div>
           )}
           {}
-          <div className="space-y-4 border rounded-lg p-4 bg-muted/10">
-            <Label>Imagem do Produto</Label>
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              {}
-              <div className="h-32 w-32 shrink-0 rounded-md border border-dashed bg-muted flex items-center justify-center overflow-hidden relative group self-center sm:self-start">
-                {previewUrl ? (
-                  <>
-                    <img
-                      src={previewUrl}
-                      alt="Preview"
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      onClick={() => {
-                        setPreviewUrl("");
-                        handleInputChange("imagemUrl", "");
-                      }}
-                      className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </>
-                ) : (
-                  <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                )}
-              </div>
-
-              {}
-              <div className="flex-1 w-full">
-                <Tabs
-                  value={imageTab}
-                  onValueChange={(v) => setImageTab(v as any)}
-                  className="w-full"
-                >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="upload">Upload</TabsTrigger>
-                    <TabsTrigger value="url">Link Externo</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="upload" className="mt-4 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="w-full"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="mr-2 h-4 w-4" /> Selecionar
-                      </Button>
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Suporta JPG, PNG e WebP.
-                    </p>
-                  </TabsContent>
-
-                  <TabsContent value="url" className="mt-4">
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="https://exemplo.com/foto.jpg"
-                        value={formData.imagemUrl || ""}
-                        onChange={(e) => {
-                          const url = e.target.value;
-                          handleInputChange("imagemUrl", url);
-                          setPreviewUrl(url);
-                        }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Cole o link direto da imagem.
-                    </p>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="codigoInterno">Código Interno *</Label>

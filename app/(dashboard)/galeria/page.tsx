@@ -611,12 +611,6 @@ export default function GaleriaPage() {
                       >
                         {/* Ações superiores da pasta */}
                         <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-10">
-                          {isCurrent && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary text-primary-foreground tracking-wide uppercase">
-                              Atual
-                            </span>
-                          )}
-
                           {hasPermission("galeria:excluir") && count > 0 && (
                             <button
                               type="button"

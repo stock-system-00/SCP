@@ -60,17 +60,34 @@ async function uploadToR2(base64Image: string): Promise<string | null> {
   }
 }
 
-// 1. Listar Evidências (Filtradas por loja)
-export async function getEvidencias() {
+// 1. Listar Evidências (Filtradas por loja, opcionalmente por ano e mês para carregamento sob demanda)
+export async function getEvidencias(params?: { ano?: number; mes?: number }) {
   const session = await getSession();
   if (!session) return { success: false, data: [] };
 
   try {
+    let dateFilter: { gte?: Date; lte?: Date } | undefined = undefined;
+
+    if (params?.ano) {
+      if (params.mes !== undefined && params.mes !== null) {
+        // Mês específico (1 a 12)
+        const startDate = new Date(params.ano, params.mes - 1, 1, 0, 0, 0, 0);
+        const endDate = new Date(params.ano, params.mes, 0, 23, 59, 59, 999);
+        dateFilter = { gte: startDate, lte: endDate };
+      } else {
+        // Ano inteiro
+        const startDate = new Date(params.ano, 0, 1, 0, 0, 0, 0);
+        const endDate = new Date(params.ano, 11, 31, 23, 59, 59, 999);
+        dateFilter = { gte: startDate, lte: endDate };
+      }
+    }
+
     const evidencias = await prisma.evidencia.findMany({
       where: { 
         ownerId: session.ownerId,
-        ...(session.activeLojaId && { lojaId: session.activeLojaId }) 
-      }, // NOVO: Filtro de isolamento
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+        ...(dateFilter && { dataUpload: dateFilter }),
+      },
       orderBy: { dataUpload: "desc" },
       include: {
         evento: {
@@ -102,6 +119,59 @@ export async function getEvidencias() {
     return { success: true, data: formattedData };
   } catch (error) {
     return { success: false, data: [] };
+  }
+}
+
+// 1.1 Obter resumo de contagem de fotos por ano e mês para exibição das pastas leves
+export async function getPastasGaleria(ano?: number) {
+  const session = await getSession();
+  if (!session) return { success: false, anos: [], contagemPorMes: {} };
+
+  try {
+    const selectedYear = ano || new Date().getFullYear();
+
+    // Buscar todas as datas das fotos para mapear os anos disponíveis e as contagens
+    const registros = await prisma.evidencia.findMany({
+      where: {
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+      },
+      select: {
+        dataUpload: true,
+      },
+    });
+
+    const anosSet = new Set<number>();
+    anosSet.add(new Date().getFullYear()); // sempre incluir ano atual
+
+    const contagemPorMes: Record<number, number> = {};
+    for (let m = 1; m <= 12; m++) {
+      contagemPorMes[m] = 0;
+    }
+
+    registros.forEach((r) => {
+      const d = new Date(r.dataUpload);
+      const rAno = d.getFullYear();
+      anosSet.add(rAno);
+
+      if (rAno === selectedYear) {
+        const mes = d.getMonth() + 1; // 1-12
+        contagemPorMes[mes] = (contagemPorMes[mes] || 0) + 1;
+      }
+    });
+
+    const anos = Array.from(anosSet).sort((a, b) => b - a);
+
+    return {
+      success: true,
+      anos,
+      selectedYear,
+      contagemPorMes,
+      totalAno: Object.values(contagemPorMes).reduce((a, b) => a + b, 0),
+    };
+  } catch (error) {
+    console.error("Erro ao carregar pastas da galeria:", error);
+    return { success: false, anos: [new Date().getFullYear()], contagemPorMes: {} };
   }
 }
 
@@ -164,6 +234,33 @@ export async function deleteEvidencia(id: string) {
     return { success: true };
   } catch (error) {
     return { success: false, message: "Erro ao excluir foto." };
+  }
+}
+
+export async function deleteEvidenciasMes(ano: number, mes: number) {
+  const session = await getSession();
+  if (!session) return { success: false, message: "Não autorizado" };
+
+  try {
+    const startDate = new Date(ano, mes - 1, 1, 0, 0, 0, 0);
+    const endDate = new Date(ano, mes, 0, 23, 59, 59, 999);
+
+    const deleted = await prisma.evidencia.deleteMany({
+      where: {
+        ownerId: session.ownerId,
+        ...(session.activeLojaId && { lojaId: session.activeLojaId }),
+        dataUpload: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+    });
+
+    revalidatePath("/galeria");
+    return { success: true, count: deleted.count };
+  } catch (error) {
+    console.error("Erro ao excluir fotos do mês:", error);
+    return { success: false, message: "Erro ao excluir fotos do mês." };
   }
 }
 

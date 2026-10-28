@@ -197,11 +197,13 @@ export default function EventosPage() {
     }
 
     if (loteSelecionado) {
-      dados = eventosFiltradosGlobalmente.filter(
-        (e) => formatDate(e.dataHora) === loteSelecionado.data,
-      );
+      dados = eventosFiltradosGlobalmente
+        .filter((e) => formatDate(e.dataHora) === loteSelecionado.data)
+        .sort((a, b) => (a.item?.nome || "").localeCompare(b.item?.nome || "", "pt-BR"));
     } else if (viewMode === "lista-completa") {
-      dados = [...eventosFiltradosGlobalmente].sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
+      dados = [...eventosFiltradosGlobalmente].sort((a, b) =>
+        (a.item?.nome || "").localeCompare(b.item?.nome || "", "pt-BR")
+      );
     } else {
       dados = lotesDiarios;
     }

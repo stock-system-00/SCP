@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Download, FileSpreadsheet, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { format } from "date-fns";
 import { generateMotivoPDF } from "@/lib/pdf-generator";
 
 interface RelatorioMotivoModalProps {
@@ -28,7 +29,7 @@ interface RelatorioMotivoModalProps {
 }
 
 export function RelatorioMotivoModal({ open, onOpenChange }: RelatorioMotivoModalProps) {
-  const { activeLojaNome, settings } = useAuth();
+  const { activeLojaNome, activeLojaId, settings } = useAuth();
   const [selectedMotivo, setSelectedMotivo] = useState<string>("todos");
   const [selectedPeriod, setSelectedPeriod] = useState<string>("30dias");
   const [localEventos, setLocalEventos] = useState<any[]>([]);
@@ -37,14 +38,14 @@ export function RelatorioMotivoModal({ open, onOpenChange }: RelatorioMotivoModa
   useEffect(() => {
     if (open) {
       setIsLoading(true);
-      getEventos().then((res) => {
+      getEventos(activeLojaId || undefined).then((res) => {
         if (res.success && res.data) {
           setLocalEventos(res.data);
         }
         setIsLoading(false);
       });
     }
-  }, [open]);
+  }, [open, activeLojaId]);
 
   const getEffectiveMotivo = (e: any) => {
     let motivo = e.motivo;
@@ -77,9 +78,14 @@ export function RelatorioMotivoModal({ open, onOpenChange }: RelatorioMotivoModa
       return localEventos;
     }
 
-    return localEventos.filter(ev => {
-      const d = new Date(ev.dataHora);
-      return d >= start && d <= end;
+    const startIso = format(start, "yyyy-MM-dd");
+    const endIso = format(end, "yyyy-MM-dd");
+
+    return localEventos.filter((ev) => {
+      const evDateFormatted = formatDate(ev.dataHora);
+      const [d, m, y] = evDateFormatted.split("/");
+      const evIso = `${y}-${m}-${d}`;
+      return evIso >= startIso && evIso <= endIso;
     });
   }, [localEventos, selectedPeriod]);
 

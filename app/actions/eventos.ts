@@ -67,18 +67,29 @@ async function uploadToR2(base64Image: string): Promise<string | null> {
   }
 }
 
-// 1. Listar Eventos (ATUALIZADO: Inclui Notas Fiscais)
-export async function getEventos() {
+// 1. Listar Eventos (ATUALIZADO: Inclui Notas Fiscais e isolamento estrito por filial)
+export async function getEventos(lojaId?: string) {
   const { session, hasAccess } = await checkServerPermission("eventos:ver_todos");
   if (!session) return { success: false, data: [] };
 
   try {
+    let targetLojaId = lojaId || session.activeLojaId || null;
+
+    if (!targetLojaId && session.role === "dono") {
+      const firstLoja = await prisma.loja.findFirst({
+        where: { ownerId: session.ownerId },
+        orderBy: { nome: "asc" },
+        select: { id: true },
+      });
+      targetLojaId = firstLoja?.id || null;
+    }
+
     const baseWhere: any = hasAccess 
       ? { ownerId: session.ownerId } 
       : { ownerId: session.ownerId, criadoPorId: session.id };
 
-    if (session.activeLojaId) {
-      baseWhere.lojaId = session.activeLojaId;
+    if (targetLojaId) {
+      baseWhere.lojaId = targetLojaId;
     }
 
     const eventos = await prisma.evento.findMany({

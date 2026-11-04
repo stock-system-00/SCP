@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
-import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 
 
@@ -53,7 +53,7 @@ const hideScrollClass =
   "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
 
 export default function EventosPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, activeLojaId } = useAuth();
 
   const [loteSelecionado, setLoteSelecionado] = useState<LoteDiario | null>(
     null,
@@ -67,7 +67,7 @@ export default function EventosPage() {
   const [isRelatorioModalOpen, setIsRelatorioModalOpen] = useState(false);
 
   const fetcher = async () => {
-    const result = await getEventos();
+    const result = await getEventos(activeLojaId || undefined);
     if (!result.success) throw new Error((result as any).error || (result as any).message || "Erro ao carregar");
     
     const mappedEventos: Evento[] = (result.data as any[]).map((ev) => ({
@@ -102,7 +102,7 @@ export default function EventosPage() {
   };
 
   const { data: eventosDoBanco = [], error, isLoading, mutate } = useSWR<Evento[]>(
-    "eventos_list",
+    ["eventos_list", activeLojaId],
     fetcher,
     { revalidateOnFocus: true }
   );
@@ -124,10 +124,12 @@ export default function EventosPage() {
   const eventosFiltradosGlobalmente = useMemo(() => {
     return eventosDoBanco.filter((evento) => {
       if (dateRange?.from) {
-        const eventoDate = new Date(evento.dataHora);
-        const start = startOfDay(dateRange.from);
-        const end = endOfDay(dateRange.to || dateRange.from);
-        if (!isWithinInterval(eventoDate, { start, end })) return false;
+        const fromStr = format(dateRange.from, "yyyy-MM-dd");
+        const toStr = format(dateRange.to || dateRange.from, "yyyy-MM-dd");
+        const evDateFormatted = formatDate(evento.dataHora); // ex: "03/11/2026"
+        const [d, m, y] = evDateFormatted.split("/");
+        const evIso = `${y}-${m}-${d}`;
+        if (evIso < fromStr || evIso > toStr) return false;
       }
       if (globalSearch) {
         const s = globalSearch.toLowerCase();

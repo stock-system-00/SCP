@@ -60,7 +60,7 @@ export function AIAssistant() {
     setInputValue("");
     setIsLoading(true);
 
-    const response = await askAssistant(text);
+    const response = await askAssistant(text, messages);
 
     setIsLoading(false);
 

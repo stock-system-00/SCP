@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   TableHeader,
   TableRow,
@@ -46,6 +47,7 @@ import { parseItemsCSV } from "@/lib/csv-parser";
 import {
   getItens,
   deleteItem,
+  deleteItensEmLote,
   toggleItemStatus,
   createItem,
   updateItem,
@@ -102,6 +104,10 @@ export default function CatalogoPage() {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
+  // Seleção e Exclusão em Lote
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -140,6 +146,8 @@ export default function CatalogoPage() {
         imagemUrl: i.imagemUrl,
       }));
       setItems(mappedItems);
+      const validIds = new Set(mappedItems.map((item) => item.id));
+      setSelectedItemIds((prev) => prev.filter((id) => validIds.has(id)));
     } else {
       toast.error("Erro ao carregar itens do catálogo.");
     }
@@ -176,6 +184,66 @@ export default function CatalogoPage() {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredItems, currentPage]);
+
+  const paginatedItemIds = useMemo(
+    () => paginatedItems.map((i) => i.id),
+    [paginatedItems]
+  );
+  const isAllCurrentPageSelected =
+    paginatedItems.length > 0 &&
+    paginatedItemIds.every((id) => selectedItemIds.includes(id));
+  const isSomeCurrentPageSelected =
+    paginatedItemIds.some((id) => selectedItemIds.includes(id)) &&
+    !isAllCurrentPageSelected;
+
+  const handleToggleSelectAllPage = () => {
+    if (isAllCurrentPageSelected) {
+      setSelectedItemIds((prev) =>
+        prev.filter((id) => !paginatedItemIds.includes(id))
+      );
+    } else {
+      setSelectedItemIds((prev) =>
+        Array.from(new Set([...prev, ...paginatedItemIds]))
+      );
+    }
+  };
+
+  const handleToggleSelectItem = (id: string) => {
+    setSelectedItemIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    setSelectedItemIds(filteredItems.map((i) => i.id));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedItemIds([]);
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedItemIds.length === 0) return;
+    setIsBatchDeleting(true);
+    try {
+      const result = await deleteItensEmLote(selectedItemIds);
+      if (result.success) {
+        toast.success(
+          result.message || `${selectedItemIds.length} itens excluídos com sucesso!`
+        );
+        setSelectedItemIds([]);
+        setShowBatchDeleteDialog(false);
+        await loadData();
+      } else {
+        toast.error(result.message || "Erro ao excluir itens em lote.");
+      }
+    } catch (error) {
+      console.error("Erro ao excluir itens em lote:", error);
+      toast.error("Erro inesperado ao excluir itens selecionados.");
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
 
   useMemo(() => {
     if (currentPage > totalPages && totalPages > 0) setCurrentPage(1);
@@ -368,6 +436,7 @@ export default function CatalogoPage() {
 
       if (result.success) {
         toast.success("Item removido com sucesso");
+        setSelectedItemIds((prev) => prev.filter((id) => id !== itemToDelete));
         setItemToDelete(null);
         loadData();
       } else {
@@ -437,7 +506,17 @@ export default function CatalogoPage() {
             Exportar Catálogo
           </Button>
 
-          {}
+          {hasPermission("catalogo:excluir") && selectedItemIds.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setShowBatchDeleteDialog(true)}
+              className="animate-in fade-in-50"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir em Lote ({selectedItemIds.length})
+            </Button>
+          )}
+
           {hasPermission("catalogo:criar") && (
             <Button onClick={() => setShowNewItemDialog(true)}>
               <Plus className="mr-2 h-4 w-4" /> Novo Item
@@ -541,12 +620,74 @@ export default function CatalogoPage() {
           </div>
         </div>
 
+        {selectedItemIds.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-card/90 border border-primary/30 rounded-xl shadow-md backdrop-blur-md shrink-0 animate-in fade-in-50 slide-in-from-top-1">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Badge
+                variant="secondary"
+                className="font-semibold text-xs py-1 px-3 bg-primary/15 text-primary border-primary/30"
+              >
+                {selectedItemIds.length}{" "}
+                {selectedItemIds.length === 1 ? "item selecionado" : "itens selecionados"}
+              </Badge>
+
+              {selectedItemIds.length < filteredItems.length && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                  onClick={handleSelectAllFiltered}
+                >
+                  Selecionar todos os {filteredItems.length} itens da busca
+                </Button>
+              )}
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                onClick={handleClearSelection}
+              >
+                Desmarcar todos
+              </Button>
+            </div>
+
+            {hasPermission("catalogo:excluir") && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-8 shadow-sm font-medium"
+                onClick={() => setShowBatchDeleteDialog(true)}
+                disabled={isBatchDeleting}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir Selecionados ({selectedItemIds.length})
+              </Button>
+            )}
+          </div>
+        )}
+
         <div className="flex-1 overflow-hidden border border-border/50 rounded-2xl relative bg-card/40 backdrop-blur-md shadow-sm">
           <div className="absolute inset-0 overflow-y-auto">
             <table className="w-full caption-bottom text-sm border-collapse">
               <TableHeader className="sticky top-0 z-20 bg-card border-b border-border">
                 <TableRow className="border-none hover:bg-card">
-                  <TableHead className="w-[40%] text-slate-300 font-medium bg-card">Item</TableHead>
+                  {hasPermission("catalogo:excluir") && (
+                    <TableHead className="w-12 px-3 bg-card text-center">
+                      <Checkbox
+                        checked={
+                          isAllCurrentPageSelected
+                            ? true
+                            : isSomeCurrentPageSelected
+                            ? "indeterminate"
+                            : false
+                        }
+                        onCheckedChange={handleToggleSelectAllPage}
+                        aria-label="Selecionar todos os itens da página"
+                      />
+                    </TableHead>
+                  )}
+                  <TableHead className="w-[38%] text-slate-300 font-medium bg-card">Item</TableHead>
                   <TableHead className="text-slate-300 font-medium bg-card">Código</TableHead>
                   <TableHead className="text-slate-300 font-medium bg-card">Categoria</TableHead>
                   <TableHead className="text-slate-300 font-medium bg-card">Unidade</TableHead>
@@ -558,7 +699,7 @@ export default function CatalogoPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center">
+                    <TableCell colSpan={hasPermission("catalogo:excluir") ? 8 : 7} className="h-32 text-center">
                       <div className="flex justify-center items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin" /> Carregando
                         itens...
@@ -569,8 +710,19 @@ export default function CatalogoPage() {
                   paginatedItems.map((item) => (
                     <TableRow
                       key={item.id}
-                      className={`border-b border-white/5 hover:bg-white/5 transition-colors ${item.status === "inativo" ? "opacity-60" : ""}`}
+                      className={`border-b border-white/5 hover:bg-white/5 transition-colors ${
+                        item.status === "inativo" ? "opacity-60" : ""
+                      } ${selectedItemIds.includes(item.id) ? "bg-primary/10 hover:bg-primary/15" : ""}`}
                     >
+                      {hasPermission("catalogo:excluir") && (
+                        <TableCell className="w-12 px-3 py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selectedItemIds.includes(item.id)}
+                            onCheckedChange={() => handleToggleSelectItem(item.id)}
+                            aria-label={`Selecionar ${item.nome}`}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell className="py-2">
                         <div className="flex items-center gap-3">
                           <div className="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0 border overflow-hidden">
@@ -666,7 +818,7 @@ export default function CatalogoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-32 text-center">
+                    <TableCell colSpan={hasPermission("catalogo:excluir") ? 8 : 7} className="h-32 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <Search className="h-8 w-8 text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">
@@ -741,6 +893,56 @@ export default function CatalogoPage() {
                 className="bg-destructive hover:bg-destructive/90"
               >
                 Excluir Item
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={showBatchDeleteDialog}
+          onOpenChange={(open) => !isBatchDeleting && setShowBatchDeleteDialog(open)}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+                Excluir {selectedItemIds.length}{" "}
+                {selectedItemIds.length === 1 ? "item" : "itens"} em lote?
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-2 pt-2 text-sm text-foreground/80">
+                  <p>
+                    Você está prestes a excluir permanentemente{" "}
+                    <strong className="text-destructive font-semibold">
+                      {selectedItemIds.length}{" "}
+                      {selectedItemIds.length === 1 ? "produto" : "produtos"}
+                    </strong>{" "}
+                    do catálogo da sua filial.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Esta ação não poderá ser desfeita e removerá os produtos das listagens.
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isBatchDeleting}>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBatchDelete();
+                }}
+                disabled={isBatchDeleting}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-medium"
+              >
+                {isBatchDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  `Excluir Definitivamente (${selectedItemIds.length})`
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

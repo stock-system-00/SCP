@@ -258,6 +258,69 @@ export async function deleteItem(id: string) {
   }
 }
 
+export async function deleteItensEmLote(ids: string[]) {
+  const session = await getSession();
+  if (!session) return { success: false, message: "Não autorizado" };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { success: false, message: "Nenhum item selecionado para exclusão." };
+  }
+
+  try {
+    const baseWhere: any = {
+      id: { in: ids },
+      ownerId: session.ownerId,
+    };
+    if (session.activeLojaId) {
+      baseWhere.lojaId = session.activeLojaId;
+    }
+
+    const itemsParaExcluir = await prisma.item.findMany({
+      where: baseWhere,
+      select: { id: true },
+    });
+
+    const validIds = itemsParaExcluir.map((i) => i.id);
+
+    if (validIds.length === 0) {
+      return {
+        success: false,
+        message: "Nenhum dos itens selecionados foi encontrado ou você não tem permissão para excluí-los.",
+      };
+    }
+
+    await prisma.$transaction([
+      prisma.vendaItem.deleteMany({
+        where: { itemId: { in: validIds } },
+      }),
+      prisma.itemFornecedor.deleteMany({
+        where: { itemId: { in: validIds } },
+      }),
+      prisma.nFeCompraItem.updateMany({
+        where: { itemId: { in: validIds } },
+        data: { itemId: null },
+      }),
+      prisma.evento.updateMany({
+        where: { itemId: { in: validIds } },
+        data: { itemId: null },
+      }),
+      prisma.item.deleteMany({
+        where: { id: { in: validIds } },
+      }),
+    ]);
+
+    revalidatePath("/catalogo");
+    return {
+      success: true,
+      count: validIds.length,
+      message: `${validIds.length} ${validIds.length === 1 ? "item excluído" : "itens excluídos"} com sucesso!`,
+    };
+  } catch (error) {
+    console.error("Erro ao deletar itens em lote:", error);
+    return { success: false, message: "Erro ao excluir itens em lote." };
+  }
+}
+
 
 export async function importarItens(
   itensImportados: Array<{

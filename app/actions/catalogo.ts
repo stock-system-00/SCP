@@ -231,6 +231,40 @@ export async function toggleItemStatus(id: string) {
   }
 }
 
+export async function updateItemCustoInline(id: string, novoCusto: number) {
+  const session = await getSession();
+  if (!session) return { success: false, message: "Não autorizado" };
+
+  if (isNaN(novoCusto) || novoCusto < 0) {
+    return { success: false, message: "Preço de custo inválido." };
+  }
+
+  try {
+    const item = await prisma.item.findUnique({ where: { id } });
+    if (
+      !item ||
+      item.ownerId !== session.ownerId ||
+      (session.activeLojaId && item.lojaId !== session.activeLojaId)
+    ) {
+      return {
+        success: false,
+        message: "Item não encontrado ou sem permissão.",
+      };
+    }
+
+    await prisma.item.update({
+      where: { id },
+      data: { custo: novoCusto },
+    });
+
+    revalidatePath("/catalogo");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao atualizar custo inline:", error);
+    return { success: false, message: "Erro ao atualizar custo." };
+  }
+}
+
 
 export async function deleteItem(id: string) {
   const session = await getSession();

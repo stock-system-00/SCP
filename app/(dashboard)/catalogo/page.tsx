@@ -52,6 +52,7 @@ import {
   createItem,
   updateItem,
   importarItens,
+  updateItemCustoInline,
   CreateItemData,
 } from "@/app/actions/catalogo";
 import { getCategorias } from "@/app/actions/categorias";
@@ -75,6 +76,8 @@ import {
   Power,
   Loader2,
   Download,
+  SlidersHorizontal,
+  DollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -83,6 +86,117 @@ const ITEMS_PER_PAGE = 15;
 
 const hideScrollClass =
   "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]";
+
+interface ColumnVisibility {
+  codigo: boolean;
+  categoria: boolean;
+  unidade: boolean;
+  custo: boolean;
+  preco: boolean;
+  status: boolean;
+}
+
+const DEFAULT_COLUMNS: ColumnVisibility = {
+  codigo: true,
+  categoria: true,
+  unidade: true,
+  custo: true,
+  preco: true,
+  status: true,
+};
+
+function InlineCustoCell({
+  item,
+  canEdit,
+  onUpdateCusto,
+}: {
+  item: Item;
+  canEdit: boolean;
+  onUpdateCusto: (id: string, novoCusto: number) => Promise<boolean>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const displayFormatted = formatCurrency(item.custo || 0);
+
+  useEffect(() => {
+    if (isEditing) {
+      const initial =
+        item.custo && item.custo > 0
+          ? item.custo.toFixed(2).replace(".", ",")
+          : "0,00";
+      setValue(initial);
+      const timer = setTimeout(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isEditing, item.custo]);
+
+  const handleSave = async () => {
+    setIsEditing(false);
+    const clean = value.replace(/[^\d.,]/g, "").replace(",", ".");
+    const num = parseFloat(clean);
+    const finalVal = isNaN(num) || num < 0 ? 0 : Math.round(num * 100) / 100;
+
+    if (finalVal === (item.custo || 0)) {
+      return;
+    }
+
+    await onUpdateCusto(item.id, finalVal);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    } else if (e.key === "Escape") {
+      setIsEditing(false);
+    }
+  };
+
+  if (!canEdit) {
+    return (
+      <span className="font-mono text-sm text-slate-300 select-none">
+        {displayFormatted}
+      </span>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="w-full flex justify-end">
+        <input
+          ref={inputRef}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          className="w-20 bg-transparent text-right font-mono text-sm text-foreground border-b border-primary/70 focus:outline-none p-0 m-0"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full flex justify-end">
+      <span
+        onClick={() => setIsEditing(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") setIsEditing(true);
+        }}
+        className="font-mono text-sm text-slate-300 hover:text-primary transition-colors cursor-pointer select-none py-0.5 px-1 rounded hover:bg-white/5"
+        title="Clique para editar o custo"
+      >
+        {displayFormatted}
+      </span>
+    </div>
+  );
+}
 
 export default function CatalogoPage() {
   const { hasPermission } = useAuth();
@@ -98,6 +212,34 @@ export default function CatalogoPage() {
   const [statusFilter, setStatusFilter] = useState<
     "todos" | "ativo" | "inativo"
   >("ativo");
+  const [custoFilter, setCustoFilter] = useState<
+    "todos" | "sem_custo" | "com_custo"
+  >("todos");
+
+  const [visibleColumns, setVisibleColumns] = useState<ColumnVisibility>(DEFAULT_COLUMNS);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("scp_catalogo_colunas_v1");
+      if (saved) {
+        setVisibleColumns((prev) => ({ ...prev, ...JSON.parse(saved) }));
+      }
+    } catch {
+      // fallback
+    }
+  }, []);
+
+  const toggleColumn = (key: keyof ColumnVisibility, value: boolean) => {
+    setVisibleColumns((prev) => {
+      const updated = { ...prev, [key]: value };
+      try {
+        localStorage.setItem("scp_catalogo_colunas_v1", JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
 
 
   const [showNewItemDialog, setShowNewItemDialog] = useState(false);
@@ -167,6 +309,11 @@ export default function CatalogoPage() {
     } else if (categoriaFilter !== "todas") {
       filtered = filtered.filter((i) => i.categoria === categoriaFilter);
     }
+    if (custoFilter === "sem_custo") {
+      filtered = filtered.filter((i) => !i.custo || Number(i.custo) === 0);
+    } else if (custoFilter === "com_custo") {
+      filtered = filtered.filter((i) => Boolean(i.custo && Number(i.custo) > 0));
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -177,7 +324,7 @@ export default function CatalogoPage() {
       );
     }
     return filtered;
-  }, [items, statusFilter, categoriaFilter, searchQuery]);
+  }, [items, statusFilter, categoriaFilter, custoFilter, searchQuery]);
 
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
   const paginatedItems = useMemo(() => {
@@ -255,9 +402,30 @@ export default function CatalogoPage() {
       ativos: items.filter((i) => i.status === "ativo").length,
       inativos: items.filter((i) => i.status === "inativo").length,
       categorias: new Set(items.map((i) => i.categoria)).size,
+      semCusto: items.filter((i) => !i.custo || Number(i.custo) === 0).length,
     }),
     [items],
   );
+
+  const handleUpdateCustoInline = async (id: string, novoCusto: number) => {
+    try {
+      const res = await updateItemCustoInline(id, novoCusto);
+      if (res.success) {
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? { ...item, custo: novoCusto } : item))
+        );
+        toast.success("Preço de custo atualizado!");
+        return true;
+      } else {
+        toast.error(res.message || "Erro ao atualizar custo.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar custo inline:", error);
+      toast.error("Erro inesperado ao salvar custo.");
+      return false;
+    }
+  };
 
 
   const handleFileUpload = async (
@@ -459,6 +627,17 @@ export default function CatalogoPage() {
     );
   }
 
+  const totalVisibleColumns =
+    (hasPermission("catalogo:excluir") ? 1 : 0) +
+    1 +
+    (visibleColumns.codigo ? 1 : 0) +
+    (visibleColumns.categoria ? 1 : 0) +
+    (visibleColumns.unidade ? 1 : 0) +
+    (visibleColumns.custo ? 1 : 0) +
+    (visibleColumns.preco ? 1 : 0) +
+    (visibleColumns.status ? 1 : 0) +
+    1;
+
   return (
     <>
       <PageHeader
@@ -531,7 +710,7 @@ export default function CatalogoPage() {
       </PageHeader>
 
       <main className={`flex-1 flex flex-col space-y-4 px-4 py-5 md:px-8 md:py-6 overflow-hidden pb-20 md:pb-6 ${hideScrollClass}`}>
-        <div className="hidden md:grid gap-3 sm:grid-cols-4 shrink-0">
+        <div className="hidden md:grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 shrink-0">
           <div className="border rounded-lg p-3 bg-card shadow-sm flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground uppercase font-bold">
@@ -570,9 +749,32 @@ export default function CatalogoPage() {
             </div>
             <Grid3X3 className="h-5 w-5 text-muted-foreground/50" />
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCustoFilter((prev) => (prev === "sem_custo" ? "todos" : "sem_custo"));
+              setCurrentPage(1);
+            }}
+            className={`border rounded-lg p-3 bg-card shadow-sm flex items-center justify-between text-left transition-all hover:border-primary/50 cursor-pointer ${
+              custoFilter === "sem_custo"
+                ? "ring-1 ring-primary border-primary bg-primary/5"
+                : ""
+            }`}
+            title="Filtrar itens sem preço de custo"
+          >
+            <div>
+              <p className="text-xs text-muted-foreground uppercase font-bold">
+                Sem Custo
+              </p>
+              <p className="text-xl font-bold text-slate-300">
+                {stats.semCusto}
+              </p>
+            </div>
+            <DollarSign className="h-5 w-5 text-muted-foreground/50" />
+          </button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0  z-10 py-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0 z-10 py-1">
           <div className="flex flex-col gap-3 sm:flex-row flex-1">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -622,6 +824,60 @@ export default function CatalogoPage() {
                 <SelectItem value="inativo">Inativos</SelectItem>
               </SelectContent>
             </Select>
+            <Select
+              value={custoFilter}
+              onValueChange={(v: "todos" | "sem_custo" | "com_custo") => {
+                setCustoFilter(v);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue placeholder="Custo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os Custos</SelectItem>
+                <SelectItem value="sem_custo">Sem Custo ({stats.semCusto})</SelectItem>
+                <SelectItem value="com_custo">Com Custo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto">
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Colunas
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 p-2">
+                <div className="text-xs font-semibold px-2 py-1.5 text-muted-foreground uppercase">
+                  Exibir Colunas
+                </div>
+                <DropdownMenuSeparator />
+                {[
+                  { id: "codigo" as const, label: "Código" },
+                  { id: "categoria" as const, label: "Categoria" },
+                  { id: "unidade" as const, label: "Unidade" },
+                  { id: "custo" as const, label: "Custo" },
+                  { id: "preco" as const, label: "Preço Venda" },
+                  { id: "status" as const, label: "Status" },
+                ].map((col) => (
+                  <label
+                    key={col.id}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded cursor-pointer hover:bg-accent transition-colors"
+                  >
+                    <Checkbox
+                      checked={visibleColumns[col.id]}
+                      onCheckedChange={(checked) =>
+                        toggleColumn(col.id, Boolean(checked))
+                      }
+                    />
+                    <span>{col.label}</span>
+                  </label>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -692,19 +948,32 @@ export default function CatalogoPage() {
                       />
                     </TableHead>
                   )}
-                  <TableHead className="w-[38%] text-slate-300 font-medium bg-card">Item</TableHead>
-                  <TableHead className="text-slate-300 font-medium bg-card">Código</TableHead>
-                  <TableHead className="text-slate-300 font-medium bg-card">Categoria</TableHead>
-                  <TableHead className="text-slate-300 font-medium bg-card">Unidade</TableHead>
-                  <TableHead className="text-right text-slate-300 font-medium bg-card">Preço</TableHead>
-                  <TableHead className="w-25 text-center text-slate-300 font-medium bg-card">Status</TableHead>
+                  <TableHead className="w-[30%] text-slate-300 font-medium bg-card">Item</TableHead>
+                  {visibleColumns.codigo && (
+                    <TableHead className="text-slate-300 font-medium bg-card">Código</TableHead>
+                  )}
+                  {visibleColumns.categoria && (
+                    <TableHead className="text-slate-300 font-medium bg-card">Categoria</TableHead>
+                  )}
+                  {visibleColumns.unidade && (
+                    <TableHead className="text-slate-300 font-medium bg-card">Unidade</TableHead>
+                  )}
+                  {visibleColumns.custo && (
+                    <TableHead className="w-28 text-right text-slate-300 font-medium bg-card">Custo</TableHead>
+                  )}
+                  {visibleColumns.preco && (
+                    <TableHead className="w-28 text-right text-slate-300 font-medium bg-card">Preço</TableHead>
+                  )}
+                  {visibleColumns.status && (
+                    <TableHead className="w-24 text-center text-slate-300 font-medium bg-card">Status</TableHead>
+                  )}
                   <TableHead className="w-12.5 text-slate-300 bg-card"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={hasPermission("catalogo:excluir") ? 8 : 7} className="h-32 text-center">
+                    <TableCell colSpan={totalVisibleColumns} className="h-32 text-center">
                       <div className="flex justify-center items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-6 w-6 animate-spin" /> Carregando
                         itens...
@@ -729,53 +998,59 @@ export default function CatalogoPage() {
                         </TableCell>
                       )}
                       <TableCell className="py-2">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded bg-muted flex items-center justify-center shrink-0 border overflow-hidden">
-                            {item.imagemUrl ? (
-                              <img
-                                src={item.imagemUrl}
-                                className="h-full w-full object-cover"
-                                alt={item.nome}
-                              />
-                            ) : (
-                              <Package className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {item.nome}
-                            </p>
-                            {item.codigoBarras && (
-                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                                <Barcode className="h-3 w-3" />{" "}
-                                {item.codigoBarras}
-                              </div>
-                            )}
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {item.nome}
+                          </p>
+                          {item.codigoBarras && (
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                              <Barcode className="h-3 w-3" />{" "}
+                              {item.codigoBarras}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell className="py-2 font-mono text-xs">
-                        {item.codigoInterno}
-                      </TableCell>
-                      <TableCell className="py-2 text-xs">
-                        {item.categoria}
-                      </TableCell>
-                      <TableCell className="py-2 text-xs">
-                        {item.unidade}
-                      </TableCell>
-                      <TableCell className="py-2 text-right text-sm font-medium text-slate-200">
-                        {formatCurrency(item.precoVenda)}
-                      </TableCell>
-                      <TableCell className="py-2 text-center">
-                        <Badge
-                          variant={
-                            item.status === "ativo" ? "outline" : "secondary"
-                          }
-                          className={`text-[10px] h-5 ${item.status === 'ativo' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/10 text-slate-400'}`}
-                        >
-                          {item.status === "ativo" ? "Ativo" : "Inativo"}
-                        </Badge>
-                      </TableCell>
+                      {visibleColumns.codigo && (
+                        <TableCell className="py-2 font-mono text-xs">
+                          {item.codigoInterno}
+                        </TableCell>
+                      )}
+                      {visibleColumns.categoria && (
+                        <TableCell className="py-2 text-xs">
+                          {item.categoria}
+                        </TableCell>
+                      )}
+                      {visibleColumns.unidade && (
+                        <TableCell className="py-2 text-xs">
+                          {item.unidade}
+                        </TableCell>
+                      )}
+                      {visibleColumns.custo && (
+                        <TableCell className="w-28 py-2 text-right">
+                          <InlineCustoCell
+                            item={item}
+                            canEdit={hasPermission("catalogo:editar")}
+                            onUpdateCusto={handleUpdateCustoInline}
+                          />
+                        </TableCell>
+                      )}
+                      {visibleColumns.preco && (
+                        <TableCell className="w-28 py-2 text-right text-sm font-medium text-slate-200">
+                          {formatCurrency(item.precoVenda)}
+                        </TableCell>
+                      )}
+                      {visibleColumns.status && (
+                        <TableCell className="py-2 text-center">
+                          <Badge
+                            variant={
+                              item.status === "ativo" ? "outline" : "secondary"
+                            }
+                            className={`text-[10px] h-5 ${item.status === 'ativo' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-white/10 text-slate-400'}`}
+                          >
+                            {item.status === "ativo" ? "Ativo" : "Inativo"}
+                          </Badge>
+                        </TableCell>
+                      )}
                       <TableCell className="py-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -823,7 +1098,7 @@ export default function CatalogoPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={hasPermission("catalogo:excluir") ? 8 : 7} className="h-32 text-center">
+                    <TableCell colSpan={totalVisibleColumns} className="h-32 text-center">
                       <div className="flex flex-col items-center justify-center">
                         <Search className="h-8 w-8 text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">

@@ -345,7 +345,12 @@ export default function CatalogoPage() {
       return val.toFixed(2).replace(".", ",");
     };
 
-    const rows = items
+    const itemsParaExportar =
+      filteredItems.length > 0 && filteredItems.length < items.length
+        ? filteredItems
+        : items;
+
+    const rows = itemsParaExportar
       .map((item) => {
         return [
           escapeCsv(item.codigoInterno),
@@ -372,7 +377,7 @@ export default function CatalogoPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success(`${items.length} itens exportados com sucesso!`);
+    toast.success(`${itemsParaExportar.length} itens exportados com sucesso!`);
   };
 
   const handleSaveItem = async (itemData: Partial<Item>) => {

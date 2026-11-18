@@ -29,6 +29,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
@@ -327,16 +328,30 @@ export default function EventosPage() {
   }
 
   const handleDownloadCSV = () => {
-    if (!loteSelecionado) return;
-    const eventos = dadosPaginados.currentItems as Evento[];
-    if (eventos.length === 0) return;
+    let eventos: Evento[] = [];
+
+    if (loteSelecionado) {
+      // Exporta TODOS os registros do lote selecionado, sem limitar pela paginação da tela
+      eventos = eventosFiltradosGlobalmente
+        .filter((e) => formatDate(e.dataHora) === loteSelecionado.data)
+        .sort((a, b) => (a.item?.nome || "").localeCompare(b.item?.nome || "", "pt-BR"));
+    } else if (viewMode === "lista-completa") {
+      eventos = [...eventosFiltradosGlobalmente].sort((a, b) =>
+        (a.item?.nome || "").localeCompare(b.item?.nome || "", "pt-BR")
+      );
+    }
+
+    if (eventos.length === 0) {
+      toast.warning("Nenhum registro para exportar.");
+      return;
+    }
 
     const headers = ["Data", "Codigo", "Produto", "Qtd", "Total", "Status", "NFe Anexada"];
     
     const rows = eventos.map((ev) => [
       formatDate(ev.dataHora),
       ev.item?.codigoInterno || "",
-      `"${ev.item?.nome || ""}"`,
+      `"${(ev.item?.nome || "").replace(/"/g, '""')}"`,
       `${ev.quantidade} ${ev.unidade}`,
       ((ev.custoSnapshot || 0) * ev.quantidade).toFixed(2).replace('.', ','),
       ev.status.toUpperCase(),
@@ -352,17 +367,25 @@ export default function EventosPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `perdas-${loteSelecionado.data.replace(/\//g, "-")}.csv`;
+    link.download = loteSelecionado
+      ? `perdas-${loteSelecionado.data.replace(/\//g, "-")}.csv`
+      : `perdas-todas-${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success(`${eventos.length} registros exportados para o CSV com sucesso!`);
   };
 
   if (loteSelecionado) {
     const eventosDoLote = dadosPaginados.currentItems as Evento[];
+    const todosEventosDoLote = eventosFiltradosGlobalmente.filter(
+      (e) => formatDate(e.dataHora) === loteSelecionado.data
+    );
     const todosOk =
-      eventosDoLote.length > 0 &&
-      eventosDoLote.every((e) => ["aprovado", "exportado"].includes(e.status));
+      todosEventosDoLote.length > 0 &&
+      todosEventosDoLote.every((e) => ["aprovado", "exportado"].includes(e.status));
 
     return (
       <>
@@ -434,15 +457,29 @@ export default function EventosPage() {
         title="Eventos e Lotes" 
         description="Gestão de aprovação e conferência."
       >
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsRelatorioModalOpen(true)}
-          className="gap-1.5 border-primary/20 hover:bg-primary/5 text-xs h-8"
-        >
-          <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
-          Relatório por Data / NF-e
-        </Button>
+        <div className="flex items-center gap-2">
+          {viewMode === "lista-completa" && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadCSV}
+              className="gap-1.5 text-xs h-8"
+              title="Baixar todos os registros filtrados em CSV"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Baixar CSV ({eventosFiltradosGlobalmente.length})
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsRelatorioModalOpen(true)}
+            className="gap-1.5 border-primary/20 hover:bg-primary/5 text-xs h-8"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-primary" />
+            Relatório por Data / NF-e
+          </Button>
+        </div>
       </PageHeader>
       <main className={`flex-1 flex flex-col space-y-4 px-4 py-5 md:px-8 md:py-6 overflow-hidden ${hideScrollClass}`}>
       <EventosToolbar

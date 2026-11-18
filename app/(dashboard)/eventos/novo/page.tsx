@@ -58,6 +58,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { cn } from "@/lib/utils";
@@ -100,6 +110,11 @@ export default function EventoForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [exigirFoto, setExigirFoto] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    item: Item;
+    quantidade: number;
+    motivo: string;
+  } | null>(null);
 
   useEffect(() => {
     if (settings) {
@@ -119,12 +134,48 @@ export default function EventoForm() {
     setSelectedItem(item);
   };
 
-  const handleAddItem = async () => {
-    if (!selectedItem || !quantidade || parseFloat(quantidade) <= 0) {
+  const handleAddItem = async (force = false) => {
+    if (!selectedItem || !quantidade) {
+      return;
+    }
+
+    const qtdNum = parseFloat(quantidade);
+    if (isNaN(qtdNum) || qtdNum <= 0) {
       return;
     }
 
     const motivoFinal = selectedMotivo.trim() || "Perda Operacional";
+
+    // Se não for forçado, verificar se o item já foi inserido com a mesma quantidade
+    if (!force) {
+      const itemDuplicado = itemsList.find((entry) => {
+        const mesmoId = entry.item.id === selectedItem.id;
+        const mesmoCodigo =
+          Boolean(entry.item.codigoInterno) &&
+          Boolean(selectedItem.codigoInterno) &&
+          entry.item.codigoInterno.trim().toLowerCase() ===
+            selectedItem.codigoInterno.trim().toLowerCase();
+        const mesmoNome =
+          Boolean(entry.item.nome) &&
+          Boolean(selectedItem.nome) &&
+          entry.item.nome.trim().toLowerCase() ===
+            selectedItem.nome.trim().toLowerCase();
+
+        const mesmoItem = mesmoId || mesmoCodigo || mesmoNome;
+        const mesmaQuantidade = Number(entry.quantidade) === Number(qtdNum);
+
+        return mesmoItem && mesmaQuantidade;
+      });
+
+      if (itemDuplicado) {
+        setDuplicateWarning({
+          item: selectedItem,
+          quantidade: qtdNum,
+          motivo: motivoFinal,
+        });
+        return;
+      }
+    }
 
     const motivoExistente = motivos.find(
       (m) => m.nome.toLowerCase() === motivoFinal.toLowerCase(),
@@ -137,7 +188,7 @@ export default function EventoForm() {
     const novoLancamento: ItemLancamento = {
       tempId: Math.random().toString(36).substr(2, 9),
       item: selectedItem,
-      quantidade: parseFloat(quantidade),
+      quantidade: qtdNum,
       unidade: selectedItem.unidade,
       fotoUrl: undefined,
       motivo: motivoFinal,
@@ -148,8 +199,14 @@ export default function EventoForm() {
     setSelectedItem(null);
     setQuantidade("");
     setSelectedMotivo("");
+    setDuplicateWarning(null);
 
     toast.success("Item adicionado à lista");
+  };
+
+  const confirmAddDuplicate = () => {
+    if (!duplicateWarning) return;
+    handleAddItem(true);
   };
 
   const handleRemoveItem = (tempId: string) => {
@@ -408,7 +465,7 @@ export default function EventoForm() {
               />
             </div>
             <Button
-              onClick={handleAddItem}
+              onClick={() => handleAddItem()}
               disabled={!selectedItem || !quantidade}
               className="h-10 flex-1 md:w-auto px-6"
             >
@@ -608,6 +665,48 @@ export default function EventoForm() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog
+          open={!!duplicateWarning}
+          onOpenChange={(open) => !open && setDuplicateWarning(null)}
+        >
+          <AlertDialogContent className="sm:max-w-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-amber-500">
+                <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+                Item já inserido com a mesma quantidade
+              </AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 pt-2 text-sm text-foreground/80">
+                  <p>
+                    O item{" "}
+                    <strong className="text-foreground font-semibold">
+                      "{duplicateWarning?.item.nome}"
+                    </strong>{" "}
+                    já consta nesta lista com a mesma quantidade de{" "}
+                    <strong className="text-amber-500 font-bold">
+                      {duplicateWarning?.quantidade} {duplicateWarning?.item.unidade}
+                    </strong>.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Tem certeza de que deseja adicioná-lo novamente à lista de perdas?
+                  </p>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="gap-2 sm:gap-0">
+              <AlertDialogCancel onClick={() => setDuplicateWarning(null)}>
+                Não, cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmAddDuplicate}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+              >
+                Sim, adicionar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </>
   );
